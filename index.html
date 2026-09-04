@@ -298,6 +298,27 @@
   }
   .small-table td{padding:7px 6px;border-bottom:1px solid var(--line);}
   .small-table td.num, .small-table th.num{text-align:right;}
+
+  #printArea{display:none;}
+
+  #toastContainer{position:fixed;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 16px 20px;z-index:9999;pointer-events:none;}
+  .toast{background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transform:translateY(14px);transition:opacity .25s ease, transform .25s ease;max-width:420px;text-align:center;line-height:1.4;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.success{background:var(--profit);color:#fff;}
+  .toast.danger{background:var(--loss);color:#fff;}
+  @media print{
+    body{padding:0;text-transform:none;background:#fff;}
+    .side-line, .top-bar, .bottom-bar, header, .tabs, main > .view, footer{display:none !important;}
+    #printArea{display:block;}
+    #printArea *{color:#000 !important;}
+    #printArea h1{font-size:18px;margin:0 0 4px;}
+    #printArea h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #999;padding-bottom:4px;}
+    #printArea .print-sub{font-size:12px;color:#444;margin:0 0 2px;}
+    #printArea table{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:11.5px;}
+    #printArea th, #printArea td{border:1px solid #999;padding:5px 6px;text-align:left;}
+    #printArea th.num, #printArea td.num{text-align:right;}
+    #printArea tfoot td{font-weight:700;}
+  }
 </style>
 </head>
 <body>
@@ -314,18 +335,22 @@
 </header>
 
 <div class="tabs">
-  <div class="tab active" data-view="calc">Calcular</div>
-  <div class="tab" data-view="list">Produtos</div>
+  <div class="tab active" data-view="cadastro">Cadastro</div>
   <div class="tab" data-view="vendas">Vendas</div>
+  <div class="tab" data-view="equip">Uso</div>
   <div class="tab" data-view="relatorios">Relatórios</div>
-  <div class="tab" data-view="equip">Abertura</div>
-  <div class="tab" data-view="cadastro">Cadastro</div>
+  <div class="tab" data-view="calc">Simulador</div>
+  <div class="tab" data-view="list">Simulações</div>
 </div>
 
 <main>
 
   <!-- CALC VIEW -->
-  <div class="view active" id="view-calc">
+  <div class="view" id="view-calc">
+
+    <div class="card">
+      <p style="font-size:12.5px;color:var(--muted);margin:0;">🧮 Simulador de preço e margem — serve para testar valores antes de decidir o preço. Não mexe no estoque real nem nas vendas; quem controla isso é o <strong>Cadastro</strong>.</p>
+    </div>
 
     <div class="card">
       <p class="section-label">PRODUTO</p>
@@ -393,14 +418,6 @@
       </div>
     </div>
 
-    <div class="card">
-      <p class="section-label">ESTOQUE</p>
-      <div class="field">
-        <label for="estoqueAtual">Estoque atual (unidades)</label>
-        <input type="number" id="estoqueAtual" step="1" min="0" placeholder="0">
-      </div>
-    </div>
-
     <div class="card" id="resultsCard">
       <p class="section-label">RESULTADO — POR UNIDADE</p>
       <div class="hero-results">
@@ -456,18 +473,21 @@
       <p id="avisoLimite" style="display:none;font-size:12.5px;color:var(--loss);margin:8px 0 0;"></p>
     </div>
 
-    <button class="btn-primary" id="btnSalvar">Salvar produto</button>
+    <button class="btn-primary" id="btnSalvar">Salvar simulação</button>
     <button class="btn-secondary" id="btnLimpar">Limpar formulário</button>
   </div>
 
   <!-- LIST VIEW -->
   <div class="view" id="view-list">
+    <div class="card">
+      <p style="font-size:12.5px;color:var(--muted);margin:0;">🧮 Simulações de preço salvas pelo simulador de margem. Não são produtos em estoque — para isso, use o <strong>Cadastro</strong>.</p>
+    </div>
     <div class="search-box">
-      <input type="text" id="busca" placeholder="Buscar produto...">
+      <input type="text" id="busca" placeholder="Buscar simulação...">
     </div>
     <div id="listaProdutos"></div>
     <div class="empty-state" id="emptyState" style="display:none;">
-      Nenhum produto salvo ainda.<br>Vá em "Calcular" para cadastrar o primeiro.
+      Nenhuma simulação salva ainda.<br>Vá em "Simulador" para criar a primeira.
     </div>
   </div>
 
@@ -477,7 +497,7 @@
     <div class="card">
       <p class="section-label">REGISTRAR VENDA</p>
       <div class="field">
-        <label for="vdProduto">Produto</label>
+        <label for="vdProduto">Produto (do Cadastro)</label>
         <select id="vdProduto" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;">
           <option value="">Selecione um produto salvo...</option>
         </select>
@@ -508,6 +528,7 @@
 
     <div class="card">
       <p class="section-label">VENDAS REGISTRADAS</p>
+      <input type="text" id="vdBusca" placeholder="Buscar venda por produto..." style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;margin-bottom:12px;">
       <div id="listaVendas"></div>
       <div class="empty-state" id="vdEmptyState" style="display:none;">
         Nenhuma venda registrada ainda.
@@ -518,6 +539,20 @@
 
   <!-- RELATÓRIOS VIEW -->
   <div class="view" id="view-relatorios">
+
+    <div class="card">
+      <p class="section-label">IMPRIMIR / SALVAR EM PDF</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Gera a relação de produtos cadastrados, vendas e produtos de uso para impressão ou para salvar como PDF (na tela de impressão, escolha "Salvar como PDF").</p>
+      <button class="btn-primary" id="btnImprimirRelatorio">Imprimir relatório (produtos, vendas e uso)</button>
+    </div>
+
+    <div class="card">
+      <p class="section-label">BACKUP DOS DADOS</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Os dados ficam salvos só neste aparelho. Exporte um backup para não perder nada ao trocar de celular ou limpar o navegador.</p>
+      <button class="btn-primary" id="btnExportarBackup">Exportar backup (.json)</button>
+      <label for="inputImportarBackup" class="btn-secondary" style="display:block;text-align:center;cursor:pointer;">Importar backup (.json)</label>
+      <input type="file" id="inputImportarBackup" accept="application/json,.json" style="display:none;">
+    </div>
 
     <div class="card">
       <p class="section-label">LUCRO E PERDAS</p>
@@ -582,24 +617,24 @@
 
   </div>
 
-  <!-- EQUIPAMENTOS VIEW -->
+  <!-- PRODUTOS DE USO VIEW (antes "Abertura") — itens de uso/consumo interno, separados do Cadastro (produtos de venda) -->
 
   <div class="view" id="view-equip">
 
     <div class="card">
-      <p class="section-label">NOVO ITEM</p>
+      <p class="section-label">NOVO PRODUTO DE USO</p>
       <div class="field">
-        <label for="eqNome">Nome do equipamento / item</label>
-        <input type="text" id="eqNome" placeholder="Ex: Balança digital">
+        <label for="eqNome">Nome do produto de uso</label>
+        <input type="text" id="eqNome" placeholder="Ex: Fita adesiva, papel de embrulho...">
       </div>
       <div class="field">
         <label for="eqCategoria">Categoria</label>
         <select id="eqCategoria" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;">
+          <option value="Embalagem">Embalagem</option>
+          <option value="Limpeza/Higiene">Limpeza / Higiene</option>
+          <option value="Escritório/Papelaria">Escritório / Papelaria</option>
           <option value="Equipamento">Equipamento</option>
-          <option value="Mobiliário">Mobiliário</option>
-          <option value="Reforma/Obra">Reforma / Obra</option>
-          <option value="Licenças/Documentação">Licenças / Documentação</option>
-          <option value="Estoque inicial">Estoque inicial</option>
+          <option value="Manutenção">Manutenção</option>
           <option value="Outros">Outros</option>
         </select>
       </div>
@@ -616,32 +651,34 @@
       <div class="results" style="margin-bottom:12px;">
         <div class="result-row"><span>Subtotal do item</span><span class="val num" id="eqSubtotal">R$ 0,00</span></div>
       </div>
-      <button class="btn-primary" id="btnEqSalvar">Adicionar item</button>
+      <button class="btn-primary" id="btnEqSalvar">Adicionar produto de uso</button>
       <button class="btn-secondary" id="btnEqLimpar">Limpar</button>
     </div>
 
     <div class="card">
-      <p class="section-label">INVESTIMENTO TOTAL PARA ABERTURA</p>
+      <p class="section-label">TOTAL GASTO EM PRODUTOS DE USO</p>
       <div class="hero-results" style="grid-template-columns:1fr;">
         <div class="hero-box positive">
-          <div class="label">Total investido</div>
+          <div class="label">Total gasto</div>
           <div class="value num" id="eqTotalGeral">R$ 0,00</div>
         </div>
       </div>
       <div class="results" id="eqPorCategoria"></div>
     </div>
 
+    <input type="text" id="eqBusca" placeholder="Buscar produto de uso..." style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;margin-bottom:12px;">
     <div id="listaEquip"></div>
     <div class="empty-state" id="eqEmptyState" style="display:none;">
-      Nenhum item cadastrado ainda.<br>Adicione equipamentos, móveis, obras e outros custos de abertura acima.
+      Nenhum produto de uso cadastrado ainda.<br>Adicione embalagens, materiais de limpeza, escritório e outros itens de consumo interno acima.<br>Esses itens ficam separados dos produtos de venda cadastrados na aba "Cadastro".
     </div>
   </div>
 
   <!-- CADASTRO DE PRODUTOS (ESTOQUE) VIEW — separado da calculadora de margem -->
-  <div class="view" id="view-cadastro">
+  <div class="view active" id="view-cadastro">
 
     <div class="card">
       <p class="section-label">NOVO PRODUTO NO ESTOQUE</p>
+      <div id="autosaveIndicatorCad" style="font-size:11px;color:var(--muted);margin:-4px 0 10px;min-height:14px;"></div>
       <div class="field">
         <label for="cadNome">Nome do produto</label>
         <input type="text" id="cadNome" placeholder="Ex: Caneca de porcelana branca">
@@ -674,6 +711,8 @@
       <button class="btn-secondary" id="btnCadLimpar">Limpar formulário</button>
     </div>
 
+    <div id="cadAlertaEstoque" style="display:none;background:#fff3cd;border:1px solid #e6c34a;color:#6b5205;border-radius:6px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.5;"></div>
+
     <div class="search-box">
       <input type="text" id="cadBusca" placeholder="Buscar produto no cadastro...">
     </div>
@@ -685,6 +724,9 @@
 
 </main>
 
+<div id="printArea"></div>
+<div id="toastContainer"></div>
+
 <footer>Dados salvos no dispositivo (localStorage) — funciona offline.</footer>
 <div class="bottom-bar"></div>
 
@@ -693,7 +735,19 @@ const STORAGE_KEY = 'margemMarkupProdutos';
 let editingId = null;
 
 const $ = id => document.getElementById(id);
-const fields = ['nome','custo','embalagens','outrosCustos','icms','pisCofins','comissao','cartao','outrosPct','preco','quantidade','descontoAplicado','margemMinima','estoqueAtual'];
+
+function toast(msg, tipo){
+  const el = document.createElement('div');
+  el.className = 'toast' + (tipo ? ' ' + tipo : '');
+  el.textContent = msg;
+  $('toastContainer').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 2800);
+}
+const fields = ['nome','custo','embalagens','outrosCustos','icms','pisCofins','comissao','cartao','outrosPct','preco','quantidade','descontoAplicado','margemMinima'];
 
 function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 function fmtBRL(v){ return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -809,7 +863,7 @@ function limparForm(){
   fields.forEach(f => $(f).value = '');
   $('quantidade').value = 1;
   editingId = null;
-  $('btnSalvar').textContent = 'Salvar produto';
+  $('btnSalvar').textContent = 'Salvar simulação';
   atualizarResultado();
   if (typeof limparRascunho === 'function') limparRascunho();
 }
@@ -840,7 +894,6 @@ $('btnSalvar').addEventListener('click', () => {
     quantidade: r.quantidade,
     descontoAplicado: num($('descontoAplicado').value),
     margemMinima: $('margemMinima').value === '' ? null : num($('margemMinima').value),
-    estoqueAtual: num($('estoqueAtual').value),
     margem: r.margem,
     markup: r.markup,
     lucro: r.lucroLiquido,
@@ -853,10 +906,12 @@ $('btnSalvar').addEventListener('click', () => {
   } else {
     list.push(produto);
   }
+  const eraEdicao = !!editingId;
   saveProducts(list);
   limparForm();
   renderLista();
   switchView('list');
+  toast(eraEdicao ? `✅ Simulação de "${produto.nome}" atualizada.` : `✅ Simulação de "${produto.nome}" salva.`, 'success');
 });
 
 function switchView(name){
@@ -885,18 +940,19 @@ function editarProduto(id){
   $('quantidade').value = p.quantidade || 1;
   $('descontoAplicado').value = p.descontoAplicado || '';
   $('margemMinima').value = (p.margemMinima === null || p.margemMinima === undefined) ? '' : p.margemMinima;
-  $('estoqueAtual').value = p.estoqueAtual || 0;
   editingId = p.id;
-  $('btnSalvar').textContent = 'Atualizar produto';
+  $('btnSalvar').textContent = 'Atualizar simulação';
   atualizarResultado();
   switchView('calc');
 }
 
 function excluirProduto(id){
-  if (!confirm('Excluir este produto?')) return;
-  let list = getProducts().filter(p => p.id !== id);
+  const p = getProducts().find(x => x.id === id);
+  if (!confirm(`Excluir a simulação "${p ? p.nome : ''}"? Essa ação não pode ser desfeita.`)) return;
+  let list = getProducts().filter(x => x.id !== id);
   saveProducts(list);
   renderLista();
+  toast(`🗑️ Simulação "${p ? p.nome : ''}" excluída.`, 'danger');
 }
 
 function renderLista(){
@@ -916,12 +972,11 @@ function renderLista(){
     const qtd = p.quantidade || 1;
     const loteMeta = qtd > 1 ? ` · Qtd: ${qtd} · Lote: ${fmtBRL(p.preco*qtd)}` : '';
     const descontoMeta = p.descontoAplicado ? ` · Desconto simulado: ${fmtPct(p.descontoAplicado)}` : '';
-    const estoqueMeta = ` · Estoque: ${p.estoqueAtual || 0} un.`;
     el.innerHTML = `
       <div class="product-top">
         <div>
           <div class="product-name">${escapeHtml(p.nome)}</div>
-          <div class="product-meta">Custo unit.: ${fmtBRL(p.custo + (p.embalagens||0) + p.outrosCustos)} · Venda unit.: ${fmtBRL(p.preco)}${estoqueMeta}${loteMeta}${descontoMeta}</div>
+          <div class="product-meta">Custo unit.: ${fmtBRL(p.custo + (p.embalagens||0) + p.outrosCustos)} · Venda unit.: ${fmtBRL(p.preco)}${loteMeta}${descontoMeta}</div>
         </div>
       </div>
       <div class="product-metrics">
@@ -963,8 +1018,8 @@ function escapeHtml(str){
 
 $('busca').addEventListener('input', renderLista);
 
-// ===== MÓDULO: EQUIPAMENTOS PARA ABERTURA DA EMPRESA =====
-const EQUIP_KEY = 'equipamentosAbertura';
+// ===== MÓDULO: PRODUTOS DE USO (consumo interno) — separado do Cadastro (produtos de venda) =====
+const EQUIP_KEY = 'produtosUso';
 let editingEquipId = null;
 
 function getEquip(){
@@ -984,9 +1039,9 @@ function limparFormEquip(){
   $('eqNome').value = '';
   $('eqValor').value = '';
   $('eqQtd').value = 1;
-  $('eqCategoria').value = 'Equipamento';
+  $('eqCategoria').value = 'Embalagem';
   editingEquipId = null;
-  $('btnEqSalvar').textContent = 'Adicionar item';
+  $('btnEqSalvar').textContent = 'Adicionar produto de uso';
   atualizarSubtotalEquip();
 }
 $('btnEqLimpar').addEventListener('click', limparFormEquip);
@@ -1011,6 +1066,9 @@ $('btnEqSalvar').addEventListener('click', () => {
     atualizadoEm: new Date().toISOString()
   };
   let list = getEquip();
+  const eraEdicao = !!editingEquipId;
+  const acao = eraEdicao ? 'atualizar' : 'adicionar';
+  if (!confirm(`Confirma ${acao} o produto de uso "${nome}" (${qtd}x ${fmtBRL(valor)} = ${fmtBRL(item.subtotal)})?`)) return;
   if (editingEquipId){
     list = list.map(i => i.id === editingEquipId ? item : i);
   } else {
@@ -1019,6 +1077,7 @@ $('btnEqSalvar').addEventListener('click', () => {
   saveEquip(list);
   limparFormEquip();
   renderEquip();
+  toast(eraEdicao ? `✅ Produto de uso "${item.nome}" atualizado.` : `✅ Produto de uso "${item.nome}" adicionado.`, 'success');
 });
 
 function editarEquip(id){
@@ -1029,25 +1088,29 @@ function editarEquip(id){
   $('eqValor').value = item.valor;
   $('eqQtd').value = item.qtd;
   editingEquipId = item.id;
-  $('btnEqSalvar').textContent = 'Atualizar item';
+  $('btnEqSalvar').textContent = 'Atualizar produto de uso';
   atualizarSubtotalEquip();
 }
 
 function excluirEquip(id){
-  if (!confirm('Excluir este item?')) return;
+  const item = getEquip().find(i => i.id === id);
+  if (!confirm(`Excluir o produto de uso "${item ? item.nome : ''}"? Essa ação não pode ser desfeita.`)) return;
   saveEquip(getEquip().filter(i => i.id !== id));
   renderEquip();
+  toast(`🗑️ Produto de uso "${item ? item.nome : ''}" excluído.`, 'danger');
 }
 
 function renderEquip(){
-  const list = getEquip().sort((a,b) => new Date(b.atualizadoEm) - new Date(a.atualizadoEm));
+  const listaCompleta = getEquip().sort((a,b) => new Date(b.atualizadoEm) - new Date(a.atualizadoEm));
+  const busca = ($('eqBusca').value || '').trim().toLowerCase();
+  const list = listaCompleta.filter(i => !busca || i.nome.toLowerCase().includes(busca));
   const container = $('listaEquip');
   container.innerHTML = '';
   $('eqEmptyState').style.display = list.length === 0 ? 'block' : 'none';
 
   let totalGeral = 0;
   const porCategoria = {};
-  list.forEach(i => {
+  listaCompleta.forEach(i => {
     totalGeral += i.subtotal;
     porCategoria[i.categoria] = (porCategoria[i.categoria] || 0) + i.subtotal;
   });
@@ -1091,12 +1154,13 @@ function renderEquip(){
 }
 
 // init
+$('eqBusca').addEventListener('input', renderEquip);
 atualizarResultado();
 renderLista();
 atualizarSubtotalEquip();
 renderEquip();
 
-// ===== MÓDULO: VENDAS REGISTRADAS =====
+// ===== MÓDULO: VENDAS REGISTRADAS (usa produtos do CADASTRO, não do simulador) =====
 const VENDAS_KEY = 'vendasRegistradas';
 const META_KEY = 'metaQuantidadeVendida';
 
@@ -1109,13 +1173,18 @@ function saveVendas(list){ localStorage.setItem(VENDAS_KEY, JSON.stringify(list)
 function popularSelectProdutos(){
   const sel = $('vdProduto');
   const atual = sel.value;
-  const produtos = getProducts().sort((a,b) => a.nome.localeCompare(b.nome));
-  sel.innerHTML = '<option value="">Selecione um produto salvo...</option>' +
-    produtos.map(p => `<option value="${p.id}">${escapeHtml(p.nome)} (estoque: ${p.estoqueAtual||0})</option>`).join('');
+  const produtos = getCadastro()
+    .filter(p => !p.dataSaida)
+    .sort((a,b) => a.nome.localeCompare(b.nome));
+  sel.innerHTML = '<option value="">Selecione um produto do cadastro...</option>' +
+    produtos.map(p => `<option value="${p.id}">${escapeHtml(p.nome)} (estoque: ${p.quantidade||0})</option>`).join('');
   if (atual) sel.value = atual;
   if (!$('vdData').value){
     const hoje = new Date();
     $('vdData').value = hoje.toISOString().slice(0,10);
+  }
+  if (produtos.length === 0){
+    sel.innerHTML = '<option value="">Nenhum produto no Cadastro ainda</option>';
   }
 }
 
@@ -1128,18 +1197,16 @@ function atualizarPreviewVenda(){
     preview.style.display = 'none';
     return;
   }
-  const p = getProducts().find(x => x.id === produtoId);
+  const p = getCadastro().find(x => x.id === produtoId);
   if (!p){ preview.style.display = 'none'; return; }
 
   const qtd = Math.max(1, num($('vdQuantidade').value) || 1);
   const desconto = Math.min(100, Math.max(0, num($('vdDesconto').value)));
-  const custoTotal = p.custo + (p.embalagens||0) + p.outrosCustos;
-  const t = (p.icms + p.pisCofins + p.comissao + p.cartao + p.outrosPct) / 100;
-  const precoUsado = p.preco * (1 - desconto/100);
-  const lucroUnit = precoUsado*(1-t) - custoTotal;
+  const precoUsado = p.precoVenda * (1 - desconto/100);
+  const lucroUnit = precoUsado - p.precoCusto;
   const valorTotal = precoUsado * qtd;
   const lucroTotal = lucroUnit * qtd;
-  const estoqueAtual = p.estoqueAtual || 0;
+  const estoqueAtual = p.quantidade || 0;
   const estoqueApos = estoqueAtual - qtd;
 
   preview.style.display = 'block';
@@ -1150,7 +1217,7 @@ function atualizarPreviewVenda(){
 
   if (estoqueApos < 0){
     aviso.style.display = 'block';
-    aviso.textContent = `Atenção: o estoque atual é de ${estoqueAtual} un. — essa venda deixaria o estoque negativo.`;
+    aviso.textContent = `Atenção: o estoque atual no Cadastro é de ${estoqueAtual} un. — essa venda deixaria o estoque negativo.`;
   }
 }
 ['vdProduto','vdQuantidade','vdDesconto'].forEach(id => $(id).addEventListener('input', atualizarPreviewVenda));
@@ -1162,17 +1229,25 @@ $('btnVdSalvar').addEventListener('click', () => {
     $('vdProduto').focus();
     return;
   }
-  const produtos = getProducts();
-  const p = produtos.find(x => x.id === produtoId);
+  const cadastro = getCadastro();
+  const p = cadastro.find(x => x.id === produtoId);
   if (!p) return;
 
   const qtd = Math.max(1, num($('vdQuantidade').value) || 1);
   const desconto = Math.min(100, Math.max(0, num($('vdDesconto').value)));
   const data = $('vdData').value || new Date().toISOString().slice(0,10);
-  const custoTotal = p.custo + (p.embalagens||0) + p.outrosCustos;
-  const t = (p.icms + p.pisCofins + p.comissao + p.cartao + p.outrosPct) / 100;
-  const precoUsado = p.preco * (1 - desconto/100);
-  const lucroUnit = precoUsado*(1-t) - custoTotal;
+  const precoUsado = p.precoVenda * (1 - desconto/100);
+  const lucroUnit = precoUsado - p.precoCusto;
+  const valorTotalVenda = precoUsado * qtd;
+
+  const confirmMsg = `Confirma finalizar esta venda?\n\n`
+    + `Produto: ${p.nome}\n`
+    + `Quantidade: ${qtd} un.\n`
+    + (desconto ? `Desconto: ${desconto}%\n` : '')
+    + `Valor total: ${fmtBRL(valorTotalVenda)}\n`
+    + `Estoque após a venda: ${(p.quantidade||0) - qtd} un.\n\n`
+    + `Isso vai dar baixa no estoque do Cadastro.`;
+  if (!confirm(confirmMsg)) return;
 
   const venda = {
     id: Date.now().toString(36),
@@ -1181,14 +1256,13 @@ $('btnVdSalvar').addEventListener('click', () => {
     data,
     quantidade: qtd,
     descontoAplicado: desconto,
-    precoUnit: p.preco,
+    precoUnit: p.precoVenda,
     precoUsado,
-    custoUnit: custoTotal,
-    t,
+    custoUnit: p.precoCusto,
     lucroUnit,
     lucroTotal: lucroUnit * qtd,
-    valorVenda: precoUsado * qtd,
-    custoVenda: custoTotal * qtd,
+    valorVenda: valorTotalVenda,
+    custoVenda: p.precoCusto * qtd,
     criadoEm: new Date().toISOString()
   };
 
@@ -1196,44 +1270,49 @@ $('btnVdSalvar').addEventListener('click', () => {
   vendas.push(venda);
   saveVendas(vendas);
 
-  // baixa no estoque
-  const listAtualizada = produtos.map(prod => {
+  // baixa no estoque do Cadastro
+  const cadastroAtualizado = cadastro.map(prod => {
     if (prod.id === p.id){
-      return { ...prod, estoqueAtual: (prod.estoqueAtual || 0) - qtd };
+      return { ...prod, quantidade: (prod.quantidade || 0) - qtd, atualizadoEm: new Date().toISOString() };
     }
     return prod;
   });
-  saveProducts(listAtualizada);
+  saveCadastro(cadastroAtualizado);
 
   $('vdQuantidade').value = 1;
   $('vdDesconto').value = '';
   $('vdPreview').style.display = 'none';
   popularSelectProdutos();
   renderVendas();
-  renderLista();
+  renderCadastro();
+  toast(`✅ Venda de "${venda.produtoNome}" registrada — ${fmtBRL(venda.valorVenda)}.`, 'success');
 });
 
 function excluirVenda(id){
-  if (!confirm('Excluir esta venda? O estoque do produto será restaurado.')) return;
+  const venda = getVendas().find(v => v.id === id);
+  if (!confirm(`Excluir a venda de "${venda ? venda.produtoNome : ''}"? O estoque do produto no Cadastro será restaurado. Essa ação não pode ser desfeita.`)) return;
   const vendas = getVendas();
-  const venda = vendas.find(v => v.id === id);
   if (venda){
-    const produtos = getProducts().map(p => {
+    const cadastro = getCadastro().map(p => {
       if (p.id === venda.produtoId){
-        return { ...p, estoqueAtual: (p.estoqueAtual || 0) + venda.quantidade };
+        return { ...p, quantidade: (p.quantidade || 0) + venda.quantidade, atualizadoEm: new Date().toISOString() };
       }
       return p;
     });
-    saveProducts(produtos);
+    saveCadastro(cadastro);
   }
   saveVendas(vendas.filter(v => v.id !== id));
   renderVendas();
-  renderLista();
+  renderCadastro();
   popularSelectProdutos();
+  toast(`🗑️ Venda de "${venda ? venda.produtoNome : ''}" excluída — estoque restaurado.`, 'danger');
 }
 
 function renderVendas(){
-  const vendas = getVendas().sort((a,b) => new Date(b.data) - new Date(a.data) || new Date(b.criadoEm) - new Date(a.criadoEm));
+  const busca = ($('vdBusca').value || '').trim().toLowerCase();
+  const vendas = getVendas()
+    .filter(v => !busca || (v.produtoNome || '').toLowerCase().includes(busca))
+    .sort((a,b) => new Date(b.data) - new Date(a.data) || new Date(b.criadoEm) - new Date(a.criadoEm));
   const container = $('listaVendas');
   container.innerHTML = '';
   $('vdEmptyState').style.display = vendas.length === 0 ? 'block' : 'none';
@@ -1270,6 +1349,7 @@ function renderVendas(){
     btn.addEventListener('click', () => excluirVenda(btn.dataset.id));
   });
 }
+$('vdBusca').addEventListener('input', renderVendas);
 
 // ===== MÓDULO: RELATÓRIOS (lucro/perda, meta, estoque) =====
 function vendasNoPeriodo(periodo){
@@ -1396,18 +1476,17 @@ $('btnSalvarMeta').addEventListener('click', () => {
 });
 
 function renderEstoqueRelatorio(){
-  const produtos = getProducts();
+  const produtos = getCadastro();
   let valorTotal = 0, qtdTotal = 0;
   const tbody = $('estTabelaBody');
   tbody.innerHTML = '';
 
   produtos
-    .filter(p => (p.estoqueAtual || 0) > 0)
+    .filter(p => !p.dataSaida && (p.quantidade || 0) > 0)
     .sort((a,b) => a.nome.localeCompare(b.nome))
     .forEach(p => {
-      const custoTotal = p.custo + (p.embalagens||0) + p.outrosCustos;
-      const estoque = p.estoqueAtual || 0;
-      const valorItem = custoTotal * estoque;
+      const estoque = p.quantidade || 0;
+      const valorItem = (p.precoCusto || 0) * estoque;
       valorTotal += valorItem;
       qtdTotal += estoque;
       const tr = document.createElement('tr');
@@ -1509,8 +1588,51 @@ function limparFormCadastro(){
   $('cadDataSaida').value = '';
   editingCadastroId = null;
   $('btnCadSalvar').textContent = 'Salvar produto';
+  if (typeof limparRascunhoCadastro === 'function') limparRascunhoCadastro();
 }
 $('btnCadLimpar').addEventListener('click', limparFormCadastro);
+
+// ===== SALVAMENTO AUTOMÁTICO (RASCUNHO DO FORMULÁRIO DE CADASTRO) =====
+const DRAFT_CAD_KEY = 'rascunhoCadastroAtual';
+const cadFields = ['cadNome','cadPrecoCusto','cadPrecoVenda','cadQuantidade','cadDataEntrada','cadDataSaida'];
+let draftCadTimeout = null;
+
+function salvarRascunhoCadastro(){
+  clearTimeout(draftCadTimeout);
+  draftCadTimeout = setTimeout(() => {
+    const dados = {};
+    cadFields.forEach(f => { dados[f] = $(f).value; });
+    dados._editingCadastroId = editingCadastroId;
+    localStorage.setItem(DRAFT_CAD_KEY, JSON.stringify(dados));
+    const agora = new Date();
+    const hora = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    $('autosaveIndicatorCad').textContent = 'Salvo automaticamente às ' + hora;
+  }, 500);
+}
+
+function restaurarRascunhoCadastro(){
+  let dados;
+  try{ dados = JSON.parse(localStorage.getItem(DRAFT_CAD_KEY)); }
+  catch(e){ return; }
+  if (!dados) return;
+  const temConteudo = cadFields.some(f => dados[f] !== undefined && dados[f] !== '' && dados[f] !== null);
+  if (!temConteudo) return;
+
+  cadFields.forEach(f => { if (dados[f] !== undefined) $(f).value = dados[f]; });
+  if (dados._editingCadastroId){
+    editingCadastroId = dados._editingCadastroId;
+    $('btnCadSalvar').textContent = 'Atualizar produto';
+  }
+  $('autosaveIndicatorCad').textContent = 'Rascunho restaurado automaticamente';
+}
+
+function limparRascunhoCadastro(){
+  localStorage.removeItem(DRAFT_CAD_KEY);
+  $('autosaveIndicatorCad').textContent = '';
+}
+
+cadFields.forEach(f => $(f).addEventListener('input', salvarRascunhoCadastro));
+restaurarRascunhoCadastro();
 
 $('btnCadSalvar').addEventListener('click', () => {
   const nome = $('cadNome').value.trim();
@@ -1530,6 +1652,9 @@ $('btnCadSalvar').addEventListener('click', () => {
     dataSaida: $('cadDataSaida').value || '',
     atualizadoEm: new Date().toISOString()
   };
+  const eraEdicao = !!editingCadastroId;
+  const acao = eraEdicao ? 'atualizar' : 'salvar';
+  if (!confirm(`Confirma ${acao} o produto "${item.nome}"?\n\nCusto: ${fmtBRL(item.precoCusto)}\nVenda: ${fmtBRL(item.precoVenda)}\nEstoque: ${item.quantidade || 0} un.`)) return;
   let list = getCadastro();
   if (editingCadastroId){
     list = list.map(i => i.id === editingCadastroId ? item : i);
@@ -1539,6 +1664,165 @@ $('btnCadSalvar').addEventListener('click', () => {
   saveCadastro(list);
   limparFormCadastro();
   renderCadastro();
+  toast(eraEdicao ? `✅ Produto "${item.nome}" atualizado no Cadastro.` : `✅ Produto "${item.nome}" salvo no Cadastro.`, 'success');
+});
+
+// ===== IMPRESSÃO / PDF: RELAÇÃO DE PRODUTOS CADASTRADOS E DE VENDAS (USO) =====
+function gerarRelatorioImpressao(){
+  const agora = new Date();
+  const dataGeracao = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  const cadastro = getCadastro().slice().sort((a,b) => a.nome.localeCompare(b.nome));
+  const vendas = getVendas().slice().sort((a,b) => new Date(b.data) - new Date(a.data));
+  const uso = getEquip().slice().sort((a,b) => a.nome.localeCompare(b.nome));
+
+  let linhasCad = cadastro.map(p => {
+    const margemUnit = p.precoVenda > 0 ? ((p.precoVenda - p.precoCusto) / p.precoVenda) * 100 : 0;
+    const status = p.dataSaida ? 'Saída registrada' : (p.quantidade > 0 ? 'Em estoque' : 'Estoque zerado');
+    return `<tr>
+      <td>${escapeHtml(p.nome)}</td>
+      <td class="num">${fmtBRL(p.precoCusto)}</td>
+      <td class="num">${fmtBRL(p.precoVenda)}</td>
+      <td class="num">${fmtPct(margemUnit)}</td>
+      <td class="num">${p.quantidade || 0}</td>
+      <td>${fmtDataBR(p.dataEntrada)}</td>
+      <td>${fmtDataBR(p.dataSaida)}</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+  if (!linhasCad) linhasCad = '<tr><td colspan="8" style="text-align:center;">Nenhum produto cadastrado.</td></tr>';
+
+  let totalVendido = 0, totalLucro = 0, totalQtd = 0;
+  let linhasVendas = vendas.map(v => {
+    totalVendido += v.valorVenda || 0;
+    totalLucro += v.lucroTotal || 0;
+    totalQtd += v.quantidade || 0;
+    return `<tr>
+      <td>${escapeHtml(v.produtoNome || '')}</td>
+      <td class="num">${v.quantidade || 0}</td>
+      <td>${fmtDataBR(v.data)}</td>
+      <td class="num">${fmtPct(v.descontoAplicado || 0)}</td>
+      <td class="num">${fmtBRL(v.valorVenda || 0)}</td>
+      <td class="num">${fmtBRL(v.lucroTotal || 0)}</td>
+    </tr>`;
+  }).join('');
+  if (!linhasVendas) linhasVendas = '<tr><td colspan="6" style="text-align:center;">Nenhuma venda registrada.</td></tr>';
+
+  let totalUso = 0;
+  let linhasUso = uso.map(i => {
+    totalUso += i.subtotal || 0;
+    return `<tr>
+      <td>${escapeHtml(i.nome)}</td>
+      <td>${escapeHtml(i.categoria || '')}</td>
+      <td class="num">${fmtBRL(i.valor || 0)}</td>
+      <td class="num">${i.qtd || 0}</td>
+      <td class="num">${fmtBRL(i.subtotal || 0)}</td>
+    </tr>`;
+  }).join('');
+  if (!linhasUso) linhasUso = '<tr><td colspan="5" style="text-align:center;">Nenhum produto de uso cadastrado.</td></tr>';
+
+  $('printArea').innerHTML = `
+    <h1>Maria Vitória Presentes</h1>
+    <p class="print-sub">Relação de produtos cadastrados, vendas e produtos de uso</p>
+    <p class="print-sub">Gerado em ${dataGeracao}</p>
+
+    <h2>Produtos cadastrados (${cadastro.length})</h2>
+    <table>
+      <thead><tr>
+        <th>Produto</th><th class="num">Custo unit.</th><th class="num">Venda unit.</th>
+        <th class="num">Margem</th><th class="num">Qtd.</th><th>Entrada</th><th>Saída</th><th>Status</th>
+      </tr></thead>
+      <tbody>${linhasCad}</tbody>
+    </table>
+
+    <h2>Vendas registradas (${vendas.length})</h2>
+    <table>
+      <thead><tr>
+        <th>Produto</th><th class="num">Qtd.</th><th>Data</th><th class="num">Desconto</th>
+        <th class="num">Valor total</th><th class="num">Lucro</th>
+      </tr></thead>
+      <tbody>${linhasVendas}</tbody>
+      <tfoot><tr>
+        <td colspan="1">Totais</td>
+        <td class="num">${totalQtd}</td>
+        <td></td><td></td>
+        <td class="num">${fmtBRL(totalVendido)}</td>
+        <td class="num">${fmtBRL(totalLucro)}</td>
+      </tr></tfoot>
+    </table>
+
+    <h2>Produtos de uso (${uso.length})</h2>
+    <table>
+      <thead><tr>
+        <th>Produto</th><th>Categoria</th><th class="num">Valor unit.</th>
+        <th class="num">Qtd.</th><th class="num">Subtotal</th>
+      </tr></thead>
+      <tbody>${linhasUso}</tbody>
+      <tfoot><tr>
+        <td colspan="4">Total gasto em produtos de uso</td>
+        <td class="num">${fmtBRL(totalUso)}</td>
+      </tr></tfoot>
+    </table>
+  `;
+
+  window.print();
+}
+$('btnImprimirRelatorio').addEventListener('click', gerarRelatorioImpressao);
+
+// ===== BACKUP: EXPORTAR / IMPORTAR TODOS OS DADOS =====
+function exportarBackup(){
+  const backup = {
+    app: 'Maria Vitória Presentes',
+    versao: 1,
+    geradoEm: new Date().toISOString(),
+    calculadora: JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'),
+    cadastro: JSON.parse(localStorage.getItem(CADASTRO_KEY) || '[]'),
+    vendas: JSON.parse(localStorage.getItem(VENDAS_KEY) || '[]'),
+    uso: JSON.parse(localStorage.getItem(EQUIP_KEY) || '[]'),
+    metaQuantidadeVendida: localStorage.getItem(META_KEY) || null
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dataStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `backup-maria-vitoria-presentes-${dataStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('✅ Backup exportado com sucesso.', 'success');
+}
+$('btnExportarBackup').addEventListener('click', exportarBackup);
+
+function importarBackup(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let dados;
+    try{ dados = JSON.parse(e.target.result); }
+    catch(err){ alert('Arquivo inválido. Selecione um backup .json exportado por este app.'); return; }
+    if (!dados || typeof dados !== 'object'){ alert('Arquivo inválido.'); return; }
+
+    const confirmar = confirm('Importar este backup vai SUBSTITUIR todos os dados atuais (produtos, cadastro, vendas e uso) neste aparelho. Deseja continuar?');
+    if (!confirmar) return;
+
+    if (Array.isArray(dados.calculadora)) localStorage.setItem(STORAGE_KEY, JSON.stringify(dados.calculadora));
+    if (Array.isArray(dados.cadastro)) localStorage.setItem(CADASTRO_KEY, JSON.stringify(dados.cadastro));
+    if (Array.isArray(dados.vendas)) localStorage.setItem(VENDAS_KEY, JSON.stringify(dados.vendas));
+    if (Array.isArray(dados.uso)) localStorage.setItem(EQUIP_KEY, JSON.stringify(dados.uso));
+    if (dados.metaQuantidadeVendida !== undefined && dados.metaQuantidadeVendida !== null){
+      localStorage.setItem(META_KEY, dados.metaQuantidadeVendida);
+    }
+
+    alert('Backup importado com sucesso! A página será recarregada.');
+    location.reload();
+  };
+  reader.readAsText(file);
+}
+$('inputImportarBackup').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) importarBackup(file);
+  e.target.value = '';
 });
 
 function editarCadastro(id){
@@ -1556,24 +1840,56 @@ function editarCadastro(id){
 }
 
 function excluirCadastro(id){
-  if (!confirm('Excluir este produto do cadastro?')) return;
+  const item = getCadastro().find(i => i.id === id);
+  if (!confirm(`Excluir o produto "${item ? item.nome : ''}" do Cadastro? Essa ação não pode ser desfeita.`)) return;
   saveCadastro(getCadastro().filter(i => i.id !== id));
   renderCadastro();
+  toast(`🗑️ Produto "${item ? item.nome : ''}" excluído do Cadastro.`, 'danger');
 }
+
+const ESTOQUE_BAIXO_LIMITE = 3;
 
 function renderCadastro(){
   const busca = ($('cadBusca').value || '').trim().toLowerCase();
-  const list = getCadastro()
+  const listaCompleta = getCadastro();
+  const list = listaCompleta
     .filter(i => !busca || i.nome.toLowerCase().includes(busca))
     .sort((a,b) => new Date(b.atualizadoEm) - new Date(a.atualizadoEm));
   const container = $('listaCadastro');
   container.innerHTML = '';
   $('cadEmptyState').style.display = list.length === 0 ? 'block' : 'none';
 
+  const semSaida = listaCompleta.filter(p => !p.dataSaida);
+  const zerados = semSaida.filter(p => (p.quantidade || 0) <= 0);
+  const baixos = semSaida.filter(p => (p.quantidade || 0) > 0 && (p.quantidade || 0) <= ESTOQUE_BAIXO_LIMITE);
+  const alertaBox = $('cadAlertaEstoque');
+  if (zerados.length || baixos.length){
+    const partes = [];
+    if (zerados.length) partes.push(`<strong>${zerados.length}</strong> produto(s) com estoque zerado: ${zerados.map(p => escapeHtml(p.nome)).join(', ')}.`);
+    if (baixos.length) partes.push(`<strong>${baixos.length}</strong> produto(s) com estoque baixo (≤ ${ESTOQUE_BAIXO_LIMITE} un.): ${baixos.map(p => escapeHtml(p.nome)).join(', ')}.`);
+    alertaBox.innerHTML = '⚠️ ' + partes.join('<br>');
+    alertaBox.style.display = 'block';
+  } else {
+    alertaBox.style.display = 'none';
+  }
+
   list.forEach(p => {
     const margemUnit = p.precoVenda > 0 ? ((p.precoVenda - p.precoCusto) / p.precoVenda) * 100 : 0;
-    const statusEstoque = p.dataSaida ? 'Saída registrada' : (p.quantidade > 0 ? 'Em estoque' : 'Estoque zerado');
-    const corStatus = p.dataSaida ? 'var(--muted)' : (p.quantidade > 0 ? 'var(--profit)' : 'var(--loss)');
+    const qtd = p.quantidade || 0;
+    let statusEstoque, corStatus;
+    if (p.dataSaida){
+      statusEstoque = 'Saída registrada';
+      corStatus = 'var(--muted)';
+    } else if (qtd <= 0){
+      statusEstoque = 'Estoque zerado';
+      corStatus = 'var(--loss)';
+    } else if (qtd <= ESTOQUE_BAIXO_LIMITE){
+      statusEstoque = 'Estoque baixo';
+      corStatus = '#b98900';
+    } else {
+      statusEstoque = 'Em estoque';
+      corStatus = 'var(--profit)';
+    }
     const el = document.createElement('div');
     el.className = 'product-card';
     el.innerHTML = `
