@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Maria Vitória Presentes — Margem & Markup</title>
+<title>Maria Vitória Personalizados — Margem & Markup</title>
 <style>
   :root{
     --ink:#102a43;
@@ -110,6 +110,64 @@
     padding:0;
     margin-top:2px;
   }
+  .header-actions{display:flex;align-items:center;gap:8px;margin-top:2px;}
+  .menu-trigger{
+    display:flex;align-items:center;gap:7px;
+    background:linear-gradient(135deg, rgba(37,99,235,.12), rgba(37,99,235,.04));
+    border:1px solid rgba(59,130,246,.4);
+    border-radius:999px;padding:5px 12px 5px 5px;cursor:pointer;font-family:inherit;
+    color:var(--ink);font-size:12.5px;font-weight:600;flex-shrink:0;
+  }
+  .menu-trigger-avatar{
+    width:26px;height:26px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 35% 30%, rgba(147,197,253,.5), rgba(30,58,138,.4));
+    border:1px solid rgba(96,165,250,.6);
+  }
+  .menu-trigger-avatar svg{width:14px;height:14px;stroke:#fff;}
+
+  .menu-overlay{position:fixed;inset:0;z-index:9500;display:none;align-items:flex-start;justify-content:center;padding:64px 16px 24px;}
+  .menu-overlay.open{display:flex;}
+  .menu-backdrop{position:absolute;inset:0;background:rgba(2,6,15,.72);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+  .menu-box{
+    position:relative;width:100%;max-width:380px;
+    background:linear-gradient(160deg, rgba(20,30,52,.92), rgba(10,16,30,.9));
+    border:1px solid rgba(96,165,250,.35);
+    border-radius:22px;
+    padding:30px 20px 20px;
+    box-shadow:0 0 0 1px rgba(96,165,250,.06), 0 25px 60px rgba(0,0,0,.55), 0 0 46px rgba(37,99,235,.16);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    color:#e7edfb;max-height:85vh;overflow-y:auto;
+  }
+  .menu-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;padding:4px;line-height:0;}
+  .menu-close svg{width:18px;height:18px;stroke:#93a4c3;}
+  .menu-box .login-avatar{margin:0 auto 14px;}
+  .menu-box h2{font-size:19px;margin:0 0 2px;text-align:center;font-weight:700;color:#f3f6ff;}
+  .menu-box p.sub{font-size:12.5px;color:#93a4c3;margin:0 0 16px;text-align:center;}
+
+  .menu-list{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;}
+  .menu-item{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    background:rgba(255,255,255,.02);border:1px solid rgba(96,165,250,.16);
+    border-radius:13px;padding:13px 14px;cursor:pointer;font-family:inherit;
+    color:#dbe6fb;font-size:15px;font-weight:600;
+  }
+  .menu-item svg.menu-icon{width:19px;height:19px;stroke:#7c93c4;flex-shrink:0;}
+  .menu-item .chevron{width:15px;height:15px;stroke:#546590;margin-left:auto;flex-shrink:0;}
+  .menu-item:hover{background:rgba(96,165,250,.08);}
+  .menu-item.active{
+    background:rgba(37,99,235,.18);
+    border-color:rgba(96,165,250,.7);
+    box-shadow:0 0 18px rgba(37,99,235,.35), inset 0 0 0 1px rgba(96,165,250,.15);
+    color:#fff;
+  }
+  .menu-item.active svg.menu-icon, .menu-item.active .chevron{stroke:#60a5fa;}
+
+  .menu-sair{margin-top:8px;border-color:rgba(248,113,113,.25);}
+  .menu-sair svg.menu-icon{stroke:#fca5a5;}
+  .menu-sair span{color:#fca5a5;}
+  .menu-sair:hover{background:rgba(248,113,113,.08);}
+
   .tabs{
     display:flex;
     border-bottom:1px solid var(--line);
@@ -319,28 +377,264 @@
     #printArea th.num, #printArea td.num{text-align:right;}
     #printArea tfoot td{font-weight:700;}
   }
+
+  #appContent{display:none;}
+
+  #loginOverlay{
+    position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:
+      radial-gradient(circle at 18% 22%, rgba(59,130,246,.20), transparent 42%),
+      radial-gradient(circle at 82% 78%, rgba(59,130,246,.16), transparent 45%),
+      radial-gradient(circle at 50% 100%, rgba(37,99,235,.12), transparent 55%),
+      #060a14;
+    overflow-y:auto;
+  }
+  .login-box{
+    width:100%;max-width:380px;
+    background:linear-gradient(160deg, rgba(20,30,52,.78), rgba(10,16,30,.7));
+    border:1px solid rgba(96,165,250,.35);
+    border-radius:22px;
+    padding:34px 26px 26px;
+    box-shadow:0 0 0 1px rgba(96,165,250,.06), 0 25px 60px rgba(0,0,0,.55), 0 0 46px rgba(37,99,235,.16);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    color:#e7edfb;
+  }
+  .login-avatar{
+    width:76px;height:76px;border-radius:50%;margin:0 auto 18px;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 35% 30%, rgba(147,197,253,.25), rgba(30,58,138,.15));
+    border:1.5px solid rgba(96,165,250,.55);
+    box-shadow:0 0 24px rgba(59,130,246,.35), inset 0 0 12px rgba(96,165,250,.15);
+  }
+  .login-avatar svg{width:34px;height:34px;stroke:#dbeafe;}
+  .login-box h1{font-size:21px;margin:0 0 4px;text-align:center;font-weight:700;color:#f3f6ff;}
+  .login-box p.sub{font-size:12.5px;color:#93a4c3;margin:0 0 18px;text-align:center;line-height:1.5;}
+  .login-divider-glow{height:1px;margin:0 0 22px;background:linear-gradient(90deg, transparent, rgba(96,165,250,.6), transparent);position:relative;}
+  .login-divider-glow::after{content:'';position:absolute;left:50%;top:-2px;width:4px;height:4px;border-radius:50%;background:#60a5fa;box-shadow:0 0 8px rgba(96,165,250,.9);transform:translateX(-50%);}
+
+  .login-box .field{margin-bottom:16px;}
+  .login-box label{display:flex;align-items:center;gap:7px;font-size:13px;color:#bcd0f5;margin-bottom:7px;font-weight:600;}
+  .login-box label svg{width:15px;height:15px;stroke:#60a5fa;flex-shrink:0;}
+  .login-input-wrap{position:relative;}
+  .login-input-wrap svg.icon-left{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:#5c7099;pointer-events:none;}
+  .login-box input{
+    width:100%;padding:12px 14px 12px 38px;border:1px solid rgba(96,165,250,.28);border-radius:11px;
+    font-size:15px;background:rgba(255,255,255,.03);color:#f3f6ff;font-family:inherit;
+  }
+  .login-box input::placeholder{color:#5c7099;}
+  .login-box input:focus{outline:none;border-color:rgba(96,165,250,.75);box-shadow:0 0 0 3px rgba(59,130,246,.18);}
+  .toggle-senha{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;line-height:0;}
+  .toggle-senha svg{width:17px;height:17px;stroke:#5c7099;}
+
+  .login-row-extra{display:flex;align-items:center;justify-content:space-between;margin:-4px 0 20px;font-size:12.5px;}
+  .login-lembrar{display:flex;align-items:center;gap:7px;color:#93a4c3;}
+  .login-lembrar input{width:auto;padding:0;accent-color:#3b82f6;}
+  .login-esqueci{color:#60a5fa;cursor:pointer;background:none;border:none;font-family:inherit;font-size:12.5px;padding:0;text-decoration:none;}
+  .login-esqueci:hover{text-decoration:underline;}
+
+  .login-box button.btn-primary{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:linear-gradient(135deg, #2563eb, #1d4ed8);
+    border:1px solid rgba(96,165,250,.5);
+    box-shadow:0 0 22px rgba(37,99,235,.4);
+    padding:13px;border-radius:11px;font-size:15.5px;font-weight:700;color:#fff;cursor:pointer;
+  }
+  .login-box button.btn-primary:hover{filter:brightness(1.08);}
+  .login-box button.btn-primary svg{width:17px;height:17px;stroke:#fff;}
+
+  .login-ou{display:flex;align-items:center;gap:12px;margin:18px 0;color:#5c7099;font-size:12px;}
+  .login-ou::before, .login-ou::after{content:'';flex:1;height:1px;background:rgba(96,165,250,.22);}
+
+  .login-switch{margin:0;}
+  .login-switch button{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:9px;
+    background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.35);border-radius:11px;
+    padding:12px;color:#dbeafe;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .login-switch button:hover{background:rgba(96,165,250,.13);}
+  .login-switch button svg{width:16px;height:16px;stroke:#60a5fa;}
+
+  .login-footer{text-align:center;margin-top:22px;padding-top:16px;border-top:1px solid rgba(96,165,250,.15);color:#5c7099;font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .login-footer svg{width:13px;height:13px;stroke:#5c7099;}
+
+  .login-erro{font-size:12.5px;color:#fca5a5;margin:0 0 14px;min-height:14px;text-align:center;}
+  #formCadastroUsuario{display:none;}
+
+  .user-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--muted);padding:6px 0 0;}
+  .user-bar button{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:11.5px;font-family:inherit;padding:0;}
 </style>
 </head>
 <body>
+
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path></svg>
+    </div>
+    <h1 id="loginTitulo">Bem-vindo!</h1>
+    <p class="sub" id="loginSub">Acesse sua conta para continuar</p>
+    <div class="login-divider-glow"></div>
+
+    <form id="formLogin" autocomplete="off">
+      <p class="login-erro" id="loginErro"></p>
+      <div class="field">
+        <label for="loginUsuario"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>Usuário</label>
+        <div class="login-input-wrap">
+          <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>
+          <input type="text" id="loginUsuario" autocomplete="username" placeholder="Digite seu usuário">
+        </div>
+      </div>
+      <div class="field">
+        <label for="loginSenha"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>Senha</label>
+        <div class="login-input-wrap">
+          <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+          <input type="password" id="loginSenha" autocomplete="current-password" placeholder="Digite sua senha">
+          <button type="button" class="toggle-senha" data-target="loginSenha" aria-label="Mostrar senha">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+          </button>
+        </div>
+      </div>
+      <div class="login-row-extra">
+        <label class="login-lembrar"><input type="checkbox" id="loginLembrar" checked> Lembrar-me</label>
+        <button type="button" class="login-esqueci" id="btnEsqueciSenha">Esqueci minha senha</button>
+      </div>
+      <button type="submit" class="btn-primary" id="btnEntrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 19V5"></path></svg>
+        Entrar
+      </button>
+    </form>
+
+    <form id="formCadastroUsuario" autocomplete="off">
+      <p class="login-erro" id="cadUsuarioErro"></p>
+      <div class="field">
+        <label for="novoNome"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>Seu nome</label>
+        <div class="login-input-wrap">
+          <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>
+          <input type="text" id="novoNome" autocomplete="name" placeholder="Digite seu nome">
+        </div>
+      </div>
+      <div class="field">
+        <label for="novoUsuario"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>Usuário (login)</label>
+        <div class="login-input-wrap">
+          <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>
+          <input type="text" id="novoUsuario" autocomplete="username" placeholder="Crie um usuário">
+        </div>
+      </div>
+      <div class="field">
+        <label for="novaSenha"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>Senha</label>
+        <div class="login-input-wrap">
+          <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+          <input type="password" id="novaSenha" autocomplete="new-password" placeholder="Crie uma senha">
+          <button type="button" class="toggle-senha" data-target="novaSenha" aria-label="Mostrar senha">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="novaSenhaConfirma"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>Confirmar senha</label>
+        <div class="login-input-wrap">
+          <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+          <input type="password" id="novaSenhaConfirma" autocomplete="new-password" placeholder="Repita a senha">
+          <button type="button" class="toggle-senha" data-target="novaSenhaConfirma" aria-label="Mostrar senha">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="btnCriarUsuario">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg>
+        Criar usuário
+      </button>
+    </form>
+
+    <div class="login-ou">ou</div>
+
+    <p class="login-switch" id="loginSwitch">
+      <button type="button" id="linkParaCadastro">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg>
+        <span id="linkParaCadastroTexto">Criar um novo usuário</span>
+      </button>
+    </p>
+
+    <div class="login-footer">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 3v6c0 5-3.4 8.4-7 11-3.6-2.6-7-6-7-11V5z"></path></svg>
+      Sistema local seguro
+    </div>
+  </div>
+</div>
+
+<div id="appContent">
+
+
 <div class="side-line"></div>
 <div class="top-bar"></div>
 
 <header>
   <div>
-    <h1>Maria Vitória Presentes</h1>
+    <h1>Maria Vitória Personalizados</h1>
     <p>Calculadora de preços com impostos e custos</p>
     <div id="autosaveIndicator"></div>
   </div>
-  <button id="btnTema" title="Alternar modo noturno">🌙</button>
+  <div class="header-actions">
+    <button type="button" class="menu-trigger" id="btnAbrirMenu" title="Abrir menu">
+      <span class="menu-trigger-avatar"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg></span>
+      <span id="menuTriggerNome">Menu</span>
+    </button>
+    <button id="btnTema" title="Alternar modo noturno">🌙</button>
+  </div>
 </header>
 
-<div class="tabs">
-  <div class="tab active" data-view="cadastro">Cadastro</div>
-  <div class="tab" data-view="vendas">Vendas</div>
-  <div class="tab" data-view="equip">Uso</div>
-  <div class="tab" data-view="relatorios">Relatórios</div>
-  <div class="tab" data-view="calc">Simulador</div>
-  <div class="tab" data-view="list">Simulações</div>
+<div id="menuOverlay" class="menu-overlay">
+  <div class="menu-backdrop" id="menuBackdrop"></div>
+  <div class="menu-box">
+    <button type="button" class="menu-close" id="btnFecharMenu" aria-label="Fechar menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </button>
+    <div class="login-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path></svg>
+    </div>
+    <h2 id="menuSaudacao">Olá!</h2>
+    <p class="sub" id="menuPapel">Usuário</p>
+    <div class="login-divider-glow"></div>
+
+    <nav class="menu-list">
+      <button type="button" class="menu-item active" data-view="cadastro">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg>
+        <span>Cadastro</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" class="menu-item" data-view="vendas">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.4"></circle><circle cx="18" cy="21" r="1.4"></circle><path d="M2 3h2l2.6 12.6a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L21 7H6"></path></svg>
+        <span>Vendas</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" class="menu-item" data-view="equip">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 2.3v4.6L12 11 8 8.9V4.3L12 2z"></path><path d="M4 12.3l4-2.3v4.6L4 17l-4-2.3v-4.6z" transform="translate(2,0)"></path><path d="M12 13l4 2.3v4.6L12 22l-4-2.3v-4.6z"></path></svg>
+        <span>Uso</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" class="menu-item" data-view="relatorios">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10"></path><path d="M12 20V4"></path><path d="M19 20v-7"></path></svg>
+        <span>Relatórios</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" class="menu-item" data-view="calc">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M8 7h8"></path><path d="M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01"></path></svg>
+        <span>Simulador</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" class="menu-item" data-view="list">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"></path><path d="M14 4v5h5"></path></svg>
+        <span>Simulações</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+    </nav>
+
+    <button type="button" class="menu-item menu-sair" id="btnSairMenu">
+      <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
+      <span>Sair</span>
+    </button>
+  </div>
 </div>
 
 <main>
@@ -541,6 +835,15 @@
   <div class="view" id="view-relatorios">
 
     <div class="card">
+      <p class="section-label">HISTÓRICO DE ALTERAÇÕES</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Últimas ações realizadas no sistema, com o usuário responsável.</p>
+      <div id="listaHistorico"></div>
+      <div class="empty-state" id="histEmptyState" style="display:none;">
+        Nenhuma alteração registrada ainda.
+      </div>
+    </div>
+
+    <div class="card">
       <p class="section-label">IMPRIMIR / SALVAR EM PDF</p>
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Gera a relação de produtos cadastrados, vendas e produtos de uso para impressão ou para salvar como PDF (na tela de impressão, escolha "Salvar como PDF").</p>
       <button class="btn-primary" id="btnImprimirRelatorio">Imprimir relatório (produtos, vendas e uso)</button>
@@ -728,6 +1031,8 @@
 <div id="toastContainer"></div>
 
 <footer>Dados salvos no dispositivo (localStorage) — funciona offline.</footer>
+
+</div><!-- /appContent -->
 <div class="bottom-bar"></div>
 
 <script>
@@ -748,6 +1053,208 @@ function toast(msg, tipo){
   }, 2800);
 }
 const fields = ['nome','custo','embalagens','outrosCustos','icms','pisCofins','comissao','cartao','outrosPct','preco','quantidade','descontoAplicado','margemMinima'];
+
+// ===== MÓDULO: LOGIN / USUÁRIOS / SESSÃO =====
+const USERS_KEY = 'usuariosSistema';
+const SESSION_KEY = 'sessaoAtual';
+const LOG_KEY = 'logAlteracoes';
+
+async function hashSenha(senha, salt){
+  const enc = new TextEncoder().encode(salt + '::' + senha);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function getUsuarios(){
+  try{ return JSON.parse(localStorage.getItem(USERS_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveUsuarios(list){ localStorage.setItem(USERS_KEY, JSON.stringify(list)); }
+
+function getSessao(){
+  try{
+    return JSON.parse(localStorage.getItem(SESSION_KEY)) || JSON.parse(sessionStorage.getItem(SESSION_KEY));
+  }
+  catch(e){ return null; }
+}
+function setSessao(usuario, lembrar){
+  const dados = JSON.stringify(usuario);
+  if (lembrar){
+    localStorage.setItem(SESSION_KEY, dados);
+    sessionStorage.removeItem(SESSION_KEY);
+  } else {
+    sessionStorage.setItem(SESSION_KEY, dados);
+    localStorage.removeItem(SESSION_KEY);
+  }
+}
+function limparSessao(){
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+function usuarioAtual(){
+  const s = getSessao();
+  return s ? s.nome : 'Desconhecido';
+}
+
+function getLog(){
+  try{ return JSON.parse(localStorage.getItem(LOG_KEY)) || []; }
+  catch(e){ return []; }
+}
+function registrarLog(acao, detalhe){
+  const log = getLog();
+  log.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    usuario: usuarioAtual(),
+    acao,
+    detalhe,
+    quando: new Date().toISOString()
+  });
+  // mantém só as últimas 300 entradas
+  const cortado = log.slice(-300);
+  localStorage.setItem(LOG_KEY, JSON.stringify(cortado));
+  if (typeof renderHistorico === 'function') renderHistorico();
+}
+
+function renderHistorico(){
+  const container = $('listaHistorico');
+  const vazio = $('histEmptyState');
+  if (!container || !vazio) return;
+  const log = getLog().slice().reverse().slice(0, 40);
+  container.innerHTML = '';
+  vazio.style.display = log.length === 0 ? 'block' : 'none';
+  log.forEach(entry => {
+    const quando = new Date(entry.quando);
+    const dataHora = quando.toLocaleDateString('pt-BR') + ' às ' + quando.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    const el = document.createElement('div');
+    el.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px;';
+    el.innerHTML = `<strong>${escapeHtml(entry.acao)}</strong> — ${escapeHtml(entry.detalhe || '')}<br><span style="color:var(--muted);">${escapeHtml(entry.usuario)} · ${dataHora}</span>`;
+    container.appendChild(el);
+  });
+}
+
+function mostrarApp(){
+  $('loginOverlay').style.display = 'none';
+  $('appContent').style.display = 'block';
+  const s = getSessao();
+  const primeiroNome = s ? s.nome.trim().split(' ')[0] : '';
+  $('menuTriggerNome').textContent = primeiroNome || 'Menu';
+  $('menuSaudacao').textContent = s ? `Olá, ${primeiroNome}` : 'Olá!';
+  $('menuPapel').textContent = s && s.papel ? s.papel : 'Usuário';
+}
+function mostrarLogin(modo){
+  $('appContent').style.display = 'none';
+  $('loginOverlay').style.display = 'flex';
+  const usuarios = getUsuarios();
+  const primeiraVez = usuarios.length === 0;
+  const usarCadastro = modo === 'cadastro' || primeiraVez;
+  $('formLogin').style.display = usarCadastro ? 'none' : 'block';
+  $('formCadastroUsuario').style.display = usarCadastro ? 'block' : 'none';
+  $('loginSwitch').style.display = primeiraVez ? 'none' : 'block';
+  $('linkParaCadastroTexto').textContent = usarCadastro ? 'Já tenho usuário — fazer login' : 'Criar um novo usuário';
+  $('loginTitulo').textContent = usarCadastro ? 'Criar conta' : 'Bem-vindo!';
+  $('loginSub').textContent = primeiraVez
+    ? 'Nenhum usuário cadastrado ainda. Crie o primeiro acesso ao sistema.'
+    : (usarCadastro ? 'Crie um novo acesso ao sistema' : 'Acesse sua conta para continuar');
+  $('loginErro').textContent = '';
+  $('cadUsuarioErro').textContent = '';
+}
+
+document.querySelectorAll('.toggle-senha').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const input = $(btn.dataset.target);
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+});
+
+$('btnEsqueciSenha').addEventListener('click', () => {
+  alert('Este sistema é local e não tem recuperação automática de senha.\n\nPeça para outro usuário já cadastrado te ajudar, ou crie um novo acesso em "Criar um novo usuário".');
+});
+
+$('linkParaCadastro').addEventListener('click', () => {
+  const emCadastro = $('formCadastroUsuario').style.display !== 'none';
+  mostrarLogin(emCadastro ? 'login' : 'cadastro');
+});
+
+$('formLogin').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const usuario = $('loginUsuario').value.trim().toLowerCase();
+  const senha = $('loginSenha').value;
+  const erroEl = $('loginErro');
+  erroEl.textContent = '';
+  if (!usuario || !senha){ erroEl.textContent = 'Preencha usuário e senha.'; return; }
+
+  const usuarios = getUsuarios();
+  const u = usuarios.find(x => x.usuario === usuario);
+  if (!u){ erroEl.textContent = 'Usuário ou senha incorretos.'; return; }
+
+  const hash = await hashSenha(senha, u.usuario);
+  if (hash !== u.senhaHash){ erroEl.textContent = 'Usuário ou senha incorretos.'; return; }
+
+  setSessao({ id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel || 'Usuário' }, $('loginLembrar').checked);
+  $('loginSenha').value = '';
+  mostrarApp();
+  registrarLog('Login', `${u.nome} entrou no sistema`);
+  toast(`👋 Bem-vindo(a), ${u.nome}!`, 'success');
+});
+
+$('formCadastroUsuario').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nome = $('novoNome').value.trim();
+  const usuario = $('novoUsuario').value.trim().toLowerCase();
+  const senha = $('novaSenha').value;
+  const confirma = $('novaSenhaConfirma').value;
+  const erroEl = $('cadUsuarioErro');
+  erroEl.textContent = '';
+
+  if (!nome || !usuario || !senha){ erroEl.textContent = 'Preencha todos os campos.'; return; }
+  if (senha.length < 4){ erroEl.textContent = 'A senha precisa ter pelo menos 4 caracteres.'; return; }
+  if (senha !== confirma){ erroEl.textContent = 'As senhas não coincidem.'; return; }
+
+  const usuarios = getUsuarios();
+  if (usuarios.some(x => x.usuario === usuario)){ erroEl.textContent = 'Já existe um usuário com esse login.'; return; }
+
+  const novo = {
+    id: Date.now().toString(36),
+    nome,
+    usuario,
+    senhaHash: await hashSenha(senha, usuario),
+    papel: usuarios.length === 0 ? 'Administrador' : 'Usuário',
+    criadoEm: new Date().toISOString()
+  };
+  usuarios.push(novo);
+  saveUsuarios(usuarios);
+  setSessao({ id: novo.id, usuario: novo.usuario, nome: novo.nome, papel: novo.papel }, true);
+
+  $('novoNome').value = '';
+  $('novoUsuario').value = '';
+  $('novaSenha').value = '';
+  $('novaSenhaConfirma').value = '';
+
+  mostrarApp();
+  registrarLog('Novo usuário', `${novo.nome} criou uma conta e entrou no sistema`);
+  toast(`✅ Usuário "${novo.nome}" criado. Bem-vindo(a)!`, 'success');
+});
+
+$('btnSairMenu').addEventListener('click', () => {
+  if (!confirm('Deseja realmente sair do sistema?')) return;
+  registrarLog('Logout', `${usuarioAtual()} saiu do sistema`);
+  limparSessao();
+  fecharMenu();
+  mostrarLogin('login');
+});
+
+(function initAuth(){
+  const sessao = getSessao();
+  const usuarios = getUsuarios();
+  if (sessao && usuarios.some(u => u.id === sessao.id)){
+    mostrarApp();
+  } else {
+    if (sessao) limparSessao();
+    mostrarLogin(usuarios.length === 0 ? 'cadastro' : 'login');
+  }
+})();
+
 
 function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 function fmtBRL(v){ return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -911,17 +1418,27 @@ $('btnSalvar').addEventListener('click', () => {
   limparForm();
   renderLista();
   switchView('list');
+  registrarLog(eraEdicao ? 'Simulação atualizada' : 'Simulação salva', `"${produto.nome}"`);
   toast(eraEdicao ? `✅ Simulação de "${produto.nome}" atualizada.` : `✅ Simulação de "${produto.nome}" salva.`, 'success');
 });
 
 function switchView(name){
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  document.querySelectorAll('.menu-item[data-view]').forEach(t => t.classList.toggle('active', t.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   $('view-' + name).classList.add('active');
   if (name === 'vendas'){ popularSelectProdutos(); renderVendas(); }
   if (name === 'relatorios'){ renderRelatorios(); }
 }
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchView(t.dataset.view)));
+document.querySelectorAll('.menu-item[data-view]').forEach(t => t.addEventListener('click', () => {
+  switchView(t.dataset.view);
+  fecharMenu();
+}));
+
+function abrirMenu(){ $('menuOverlay').classList.add('open'); }
+function fecharMenu(){ $('menuOverlay').classList.remove('open'); }
+$('btnAbrirMenu').addEventListener('click', abrirMenu);
+$('btnFecharMenu').addEventListener('click', fecharMenu);
+$('menuBackdrop').addEventListener('click', fecharMenu);
 
 function editarProduto(id){
   const list = getProducts();
@@ -952,6 +1469,7 @@ function excluirProduto(id){
   let list = getProducts().filter(x => x.id !== id);
   saveProducts(list);
   renderLista();
+  registrarLog('Simulação excluída', `"${p ? p.nome : ''}"`);
   toast(`🗑️ Simulação "${p ? p.nome : ''}" excluída.`, 'danger');
 }
 
@@ -1063,6 +1581,7 @@ $('btnEqSalvar').addEventListener('click', () => {
     valor,
     qtd,
     subtotal: valor * qtd,
+    atualizadoPor: usuarioAtual(),
     atualizadoEm: new Date().toISOString()
   };
   let list = getEquip();
@@ -1070,13 +1589,17 @@ $('btnEqSalvar').addEventListener('click', () => {
   const acao = eraEdicao ? 'atualizar' : 'adicionar';
   if (!confirm(`Confirma ${acao} o produto de uso "${nome}" (${qtd}x ${fmtBRL(valor)} = ${fmtBRL(item.subtotal)})?`)) return;
   if (editingEquipId){
+    const anterior = list.find(i => i.id === editingEquipId);
+    item.criadoPor = anterior ? anterior.criadoPor : usuarioAtual();
     list = list.map(i => i.id === editingEquipId ? item : i);
   } else {
+    item.criadoPor = usuarioAtual();
     list.push(item);
   }
   saveEquip(list);
   limparFormEquip();
   renderEquip();
+  registrarLog(eraEdicao ? 'Uso atualizado' : 'Uso adicionado', `Produto de uso "${item.nome}"`);
   toast(eraEdicao ? `✅ Produto de uso "${item.nome}" atualizado.` : `✅ Produto de uso "${item.nome}" adicionado.`, 'success');
 });
 
@@ -1097,6 +1620,7 @@ function excluirEquip(id){
   if (!confirm(`Excluir o produto de uso "${item ? item.nome : ''}"? Essa ação não pode ser desfeita.`)) return;
   saveEquip(getEquip().filter(i => i.id !== id));
   renderEquip();
+  registrarLog('Uso excluído', `Produto de uso "${item ? item.nome : ''}"`);
   toast(`🗑️ Produto de uso "${item ? item.nome : ''}" excluído.`, 'danger');
 }
 
@@ -1263,6 +1787,7 @@ $('btnVdSalvar').addEventListener('click', () => {
     lucroTotal: lucroUnit * qtd,
     valorVenda: valorTotalVenda,
     custoVenda: p.precoCusto * qtd,
+    registradoPor: usuarioAtual(),
     criadoEm: new Date().toISOString()
   };
 
@@ -1285,6 +1810,7 @@ $('btnVdSalvar').addEventListener('click', () => {
   popularSelectProdutos();
   renderVendas();
   renderCadastro();
+  registrarLog('Venda registrada', `${venda.quantidade}x "${venda.produtoNome}" — ${fmtBRL(venda.valorVenda)}`);
   toast(`✅ Venda de "${venda.produtoNome}" registrada — ${fmtBRL(venda.valorVenda)}.`, 'success');
 });
 
@@ -1305,6 +1831,7 @@ function excluirVenda(id){
   renderVendas();
   renderCadastro();
   popularSelectProdutos();
+  registrarLog('Venda excluída', `Venda de "${venda ? venda.produtoNome : ''}"`);
   toast(`🗑️ Venda de "${venda ? venda.produtoNome : ''}" excluída — estoque restaurado.`, 'danger');
 }
 
@@ -1373,6 +1900,7 @@ function vendasNoPeriodo(periodo){
 function renderRelatorios(){
   const periodo = $('relPeriodo').value;
   const vendas = vendasNoPeriodo(periodo);
+  renderHistorico();
 
   let totalVendido = 0, totalCusto = 0, totalLucro = 0, totalUnid = 0;
   vendas.forEach(v => {
@@ -1650,6 +2178,8 @@ $('btnCadSalvar').addEventListener('click', () => {
     quantidade: num($('cadQuantidade').value),
     dataEntrada: $('cadDataEntrada').value || '',
     dataSaida: $('cadDataSaida').value || '',
+    criadoPor: editingCadastroId ? undefined : usuarioAtual(),
+    atualizadoPor: usuarioAtual(),
     atualizadoEm: new Date().toISOString()
   };
   const eraEdicao = !!editingCadastroId;
@@ -1657,6 +2187,8 @@ $('btnCadSalvar').addEventListener('click', () => {
   if (!confirm(`Confirma ${acao} o produto "${item.nome}"?\n\nCusto: ${fmtBRL(item.precoCusto)}\nVenda: ${fmtBRL(item.precoVenda)}\nEstoque: ${item.quantidade || 0} un.`)) return;
   let list = getCadastro();
   if (editingCadastroId){
+    const anterior = list.find(i => i.id === editingCadastroId);
+    item.criadoPor = anterior ? anterior.criadoPor : usuarioAtual();
     list = list.map(i => i.id === editingCadastroId ? item : i);
   } else {
     list.push(item);
@@ -1664,6 +2196,7 @@ $('btnCadSalvar').addEventListener('click', () => {
   saveCadastro(list);
   limparFormCadastro();
   renderCadastro();
+  registrarLog(eraEdicao ? 'Cadastro atualizado' : 'Cadastro criado', `Produto "${item.nome}"`);
   toast(eraEdicao ? `✅ Produto "${item.nome}" atualizado no Cadastro.` : `✅ Produto "${item.nome}" salvo no Cadastro.`, 'success');
 });
 
@@ -1722,7 +2255,7 @@ function gerarRelatorioImpressao(){
   if (!linhasUso) linhasUso = '<tr><td colspan="5" style="text-align:center;">Nenhum produto de uso cadastrado.</td></tr>';
 
   $('printArea').innerHTML = `
-    <h1>Maria Vitória Presentes</h1>
+    <h1>Maria Vitória Personalizados</h1>
     <p class="print-sub">Relação de produtos cadastrados, vendas e produtos de uso</p>
     <p class="print-sub">Gerado em ${dataGeracao}</p>
 
@@ -1772,25 +2305,28 @@ $('btnImprimirRelatorio').addEventListener('click', gerarRelatorioImpressao);
 // ===== BACKUP: EXPORTAR / IMPORTAR TODOS OS DADOS =====
 function exportarBackup(){
   const backup = {
-    app: 'Maria Vitória Presentes',
+    app: 'Maria Vitória Personalizados',
     versao: 1,
     geradoEm: new Date().toISOString(),
     calculadora: JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'),
     cadastro: JSON.parse(localStorage.getItem(CADASTRO_KEY) || '[]'),
     vendas: JSON.parse(localStorage.getItem(VENDAS_KEY) || '[]'),
     uso: JSON.parse(localStorage.getItem(EQUIP_KEY) || '[]'),
-    metaQuantidadeVendida: localStorage.getItem(META_KEY) || null
+    metaQuantidadeVendida: localStorage.getItem(META_KEY) || null,
+    usuarios: getUsuarios(),
+    log: getLog()
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const dataStr = new Date().toISOString().slice(0, 10);
   a.href = url;
-  a.download = `backup-maria-vitoria-presentes-${dataStr}.json`;
+  a.download = `backup-maria-vitoria-personalizados-${dataStr}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  registrarLog('Backup exportado', 'Arquivo .json gerado');
   toast('✅ Backup exportado com sucesso.', 'success');
 }
 $('btnExportarBackup').addEventListener('click', exportarBackup);
@@ -1803,18 +2339,22 @@ function importarBackup(file){
     catch(err){ alert('Arquivo inválido. Selecione um backup .json exportado por este app.'); return; }
     if (!dados || typeof dados !== 'object'){ alert('Arquivo inválido.'); return; }
 
-    const confirmar = confirm('Importar este backup vai SUBSTITUIR todos os dados atuais (produtos, cadastro, vendas e uso) neste aparelho. Deseja continuar?');
+    const confirmar = confirm('Importar este backup vai SUBSTITUIR todos os dados atuais (produtos, cadastro, vendas, uso e usuários) neste aparelho. Deseja continuar?');
     if (!confirmar) return;
 
     if (Array.isArray(dados.calculadora)) localStorage.setItem(STORAGE_KEY, JSON.stringify(dados.calculadora));
     if (Array.isArray(dados.cadastro)) localStorage.setItem(CADASTRO_KEY, JSON.stringify(dados.cadastro));
     if (Array.isArray(dados.vendas)) localStorage.setItem(VENDAS_KEY, JSON.stringify(dados.vendas));
     if (Array.isArray(dados.uso)) localStorage.setItem(EQUIP_KEY, JSON.stringify(dados.uso));
+    if (Array.isArray(dados.usuarios)) localStorage.setItem(USERS_KEY, JSON.stringify(dados.usuarios));
+    if (Array.isArray(dados.log)) localStorage.setItem(LOG_KEY, JSON.stringify(dados.log));
     if (dados.metaQuantidadeVendida !== undefined && dados.metaQuantidadeVendida !== null){
       localStorage.setItem(META_KEY, dados.metaQuantidadeVendida);
     }
+    registrarLog('Backup importado', `Restaurado por ${usuarioAtual()}`);
 
-    alert('Backup importado com sucesso! A página será recarregada.');
+    alert('Backup importado com sucesso! A página será recarregada e você precisará entrar novamente.');
+    limparSessao();
     location.reload();
   };
   reader.readAsText(file);
@@ -1844,6 +2384,7 @@ function excluirCadastro(id){
   if (!confirm(`Excluir o produto "${item ? item.nome : ''}" do Cadastro? Essa ação não pode ser desfeita.`)) return;
   saveCadastro(getCadastro().filter(i => i.id !== id));
   renderCadastro();
+  registrarLog('Cadastro excluído', `Produto "${item ? item.nome : ''}"`);
   toast(`🗑️ Produto "${item ? item.nome : ''}" excluído do Cadastro.`, 'danger');
 }
 
