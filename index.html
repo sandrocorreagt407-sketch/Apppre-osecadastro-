@@ -464,6 +464,8 @@
   .user-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--muted);padding:6px 0 0;}
   .user-bar button{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:11.5px;font-family:inherit;padding:0;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -855,9 +857,9 @@
     </div>
 
     <div class="card">
-      <p class="section-label">IMPRIMIR / SALVAR EM PDF</p>
-      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Gera a relação de produtos cadastrados, vendas e produtos de uso para impressão ou para salvar como PDF (na tela de impressão, escolha "Salvar como PDF").</p>
-      <button class="btn-primary" id="btnImprimirRelatorio">Imprimir relatório (produtos, vendas e uso)</button>
+      <p class="section-label">BAIXAR RELATÓRIO EM PDF</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Gera e baixa um arquivo PDF com a relação de produtos cadastrados, vendas e produtos de uso.</p>
+      <button class="btn-primary" id="btnImprimirRelatorio">Baixar relatório em PDF</button>
     </div>
 
     <div class="card">
@@ -2244,96 +2246,101 @@ function gerarRelatorioImpressao(){
   const vendas = getVendas().slice().sort((a,b) => new Date(b.data) - new Date(a.data));
   const uso = getEquip().slice().sort((a,b) => a.nome.localeCompare(b.nome));
 
-  let linhasCad = cadastro.map(p => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const margem = 40;
+  let y = 50;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('Maria Vitória Personalizados', margem, y);
+  y += 18;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(90);
+  doc.text('Relação de produtos cadastrados, vendas e produtos de uso', margem, y);
+  y += 14;
+  doc.text(`Gerado em ${dataGeracao}`, margem, y);
+  y += 20;
+  doc.setTextColor(0);
+
+  // ---- PRODUTOS CADASTRADOS ----
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text(`Produtos cadastrados (${cadastro.length})`, margem, y);
+  y += 8;
+
+  const linhasCad = cadastro.map(p => {
     const margemUnit = p.precoVenda > 0 ? ((p.precoVenda - p.precoCusto) / p.precoVenda) * 100 : 0;
     const status = p.dataSaida ? 'Saída registrada' : (p.quantidade > 0 ? 'Em estoque' : 'Estoque zerado');
-    return `<tr>
-      <td>${escapeHtml(p.nome)}</td>
-      <td class="num">${fmtBRL(p.precoCusto)}</td>
-      <td class="num">${fmtBRL(p.precoVenda)}</td>
-      <td class="num">${fmtPct(margemUnit)}</td>
-      <td class="num">${p.quantidade || 0}</td>
-      <td>${fmtDataBR(p.dataEntrada)}</td>
-      <td>${fmtDataBR(p.dataSaida)}</td>
-      <td>${status}</td>
-    </tr>`;
-  }).join('');
-  if (!linhasCad) linhasCad = '<tr><td colspan="8" style="text-align:center;">Nenhum produto cadastrado.</td></tr>';
+    return [p.nome, fmtBRL(p.precoCusto), fmtBRL(p.precoVenda), fmtPct(margemUnit), (p.quantidade || 0).toString(), fmtDataBR(p.dataEntrada), fmtDataBR(p.dataSaida), status];
+  });
+  doc.autoTable({
+    startY: y,
+    margin: { left: margem, right: margem },
+    head: [['Produto', 'Custo unit.', 'Venda unit.', 'Margem', 'Qtd.', 'Entrada', 'Saída', 'Status']],
+    body: linhasCad.length ? linhasCad : [['Nenhum produto cadastrado.', '', '', '', '', '', '', '']],
+    styles: { fontSize: 8.5, cellPadding: 4 },
+    headStyles: { fillColor: [37, 99, 235] },
+    columnStyles: { 1:{halign:'right'}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} }
+  });
+  y = doc.lastAutoTable.finalY + 22;
+
+  // ---- VENDAS ----
+  if (y > 720){ doc.addPage(); y = 50; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text(`Vendas registradas (${vendas.length})`, margem, y);
+  y += 8;
 
   let totalVendido = 0, totalLucro = 0, totalQtd = 0;
-  let linhasVendas = vendas.map(v => {
+  const linhasVendas = vendas.map(v => {
     totalVendido += v.valorVenda || 0;
     totalLucro += v.lucroTotal || 0;
     totalQtd += v.quantidade || 0;
-    return `<tr>
-      <td>${escapeHtml(v.produtoNome || '')}</td>
-      <td class="num">${v.quantidade || 0}</td>
-      <td>${fmtDataBR(v.data)}</td>
-      <td class="num">${fmtPct(v.descontoAplicado || 0)}</td>
-      <td class="num">${fmtBRL(v.valorVenda || 0)}</td>
-      <td class="num">${fmtBRL(v.lucroTotal || 0)}</td>
-    </tr>`;
-  }).join('');
-  if (!linhasVendas) linhasVendas = '<tr><td colspan="6" style="text-align:center;">Nenhuma venda registrada.</td></tr>';
+    return [v.produtoNome || '', (v.quantidade || 0).toString(), fmtDataBR(v.data), fmtPct(v.descontoAplicado || 0), fmtBRL(v.valorVenda || 0), fmtBRL(v.lucroTotal || 0)];
+  });
+  doc.autoTable({
+    startY: y,
+    margin: { left: margem, right: margem },
+    head: [['Produto', 'Qtd.', 'Data', 'Desconto', 'Valor total', 'Lucro']],
+    body: linhasVendas.length ? linhasVendas : [['Nenhuma venda registrada.', '', '', '', '', '']],
+    foot: [['Totais', totalQtd.toString(), '', '', fmtBRL(totalVendido), fmtBRL(totalLucro)]],
+    styles: { fontSize: 8.5, cellPadding: 4 },
+    headStyles: { fillColor: [37, 99, 235] },
+    footStyles: { fillColor: [230, 236, 250], textColor: 0, fontStyle: 'bold' },
+    columnStyles: { 1:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'}, 5:{halign:'right'} }
+  });
+  y = doc.lastAutoTable.finalY + 22;
+
+  // ---- PRODUTOS DE USO ----
+  if (y > 720){ doc.addPage(); y = 50; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text(`Produtos de uso (${uso.length})`, margem, y);
+  y += 8;
 
   let totalUso = 0;
-  let linhasUso = uso.map(i => {
+  const linhasUso = uso.map(i => {
     totalUso += i.subtotal || 0;
-    return `<tr>
-      <td>${escapeHtml(i.nome)}</td>
-      <td>${escapeHtml(i.categoria || '')}</td>
-      <td class="num">${fmtBRL(i.valor || 0)}</td>
-      <td class="num">${i.qtd || 0}</td>
-      <td class="num">${fmtBRL(i.subtotal || 0)}</td>
-    </tr>`;
-  }).join('');
-  if (!linhasUso) linhasUso = '<tr><td colspan="5" style="text-align:center;">Nenhum produto de uso cadastrado.</td></tr>';
+    return [i.nome, i.categoria || '', fmtBRL(i.valor || 0), (i.qtd || 0).toString(), fmtBRL(i.subtotal || 0)];
+  });
+  doc.autoTable({
+    startY: y,
+    margin: { left: margem, right: margem },
+    head: [['Produto', 'Categoria', 'Valor unit.', 'Qtd.', 'Subtotal']],
+    body: linhasUso.length ? linhasUso : [['Nenhum produto de uso cadastrado.', '', '', '', '']],
+    foot: [['Total gasto em produtos de uso', '', '', '', fmtBRL(totalUso)]],
+    styles: { fontSize: 8.5, cellPadding: 4 },
+    headStyles: { fillColor: [37, 99, 235] },
+    footStyles: { fillColor: [230, 236, 250], textColor: 0, fontStyle: 'bold' },
+    columnStyles: { 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} }
+  });
 
-  $('printArea').innerHTML = `
-    <h1>Maria Vitória Personalizados</h1>
-    <p class="print-sub">Relação de produtos cadastrados, vendas e produtos de uso</p>
-    <p class="print-sub">Gerado em ${dataGeracao}</p>
-
-    <h2>Produtos cadastrados (${cadastro.length})</h2>
-    <table>
-      <thead><tr>
-        <th>Produto</th><th class="num">Custo unit.</th><th class="num">Venda unit.</th>
-        <th class="num">Margem</th><th class="num">Qtd.</th><th>Entrada</th><th>Saída</th><th>Status</th>
-      </tr></thead>
-      <tbody>${linhasCad}</tbody>
-    </table>
-
-    <h2>Vendas registradas (${vendas.length})</h2>
-    <table>
-      <thead><tr>
-        <th>Produto</th><th class="num">Qtd.</th><th>Data</th><th class="num">Desconto</th>
-        <th class="num">Valor total</th><th class="num">Lucro</th>
-      </tr></thead>
-      <tbody>${linhasVendas}</tbody>
-      <tfoot><tr>
-        <td colspan="1">Totais</td>
-        <td class="num">${totalQtd}</td>
-        <td></td><td></td>
-        <td class="num">${fmtBRL(totalVendido)}</td>
-        <td class="num">${fmtBRL(totalLucro)}</td>
-      </tr></tfoot>
-    </table>
-
-    <h2>Produtos de uso (${uso.length})</h2>
-    <table>
-      <thead><tr>
-        <th>Produto</th><th>Categoria</th><th class="num">Valor unit.</th>
-        <th class="num">Qtd.</th><th class="num">Subtotal</th>
-      </tr></thead>
-      <tbody>${linhasUso}</tbody>
-      <tfoot><tr>
-        <td colspan="4">Total gasto em produtos de uso</td>
-        <td class="num">${fmtBRL(totalUso)}</td>
-      </tr></tfoot>
-    </table>
-  `;
-
-  window.print();
+  const nomeArquivo = `relatorio-maria-vitoria-personalizados-${agora.toISOString().slice(0,10)}.pdf`;
+  doc.save(nomeArquivo);
+  registrarLog('Relatório em PDF gerado', nomeArquivo);
+  toast('✅ Relatório em PDF gerado e baixado.', 'success');
 }
 $('btnImprimirRelatorio').addEventListener('click', gerarRelatorioImpressao);
 
