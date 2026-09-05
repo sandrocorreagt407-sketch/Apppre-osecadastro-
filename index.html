@@ -478,7 +478,18 @@
 
     <form id="formLogin" autocomplete="off">
       <p class="login-erro" id="loginErro"></p>
-      <div class="field">
+
+      <div class="login-quick-user" id="loginQuickUser" style="display:none;">
+        <div class="login-avatar" style="width:52px;height:52px;margin:0 auto 10px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path></svg>
+        </div>
+        <p style="text-align:center;font-weight:700;font-size:15.5px;color:#f3f6ff;margin:0 0 2px;" id="loginQuickNome">Olá!</p>
+        <p style="text-align:center;font-size:12px;margin:0 0 16px;">
+          <button type="button" id="btnTrocarUsuario" style="background:none;border:none;color:#60a5fa;cursor:pointer;font-family:inherit;font-size:12px;text-decoration:underline;padding:0;">Não é você? Trocar usuário</button>
+        </p>
+      </div>
+
+      <div class="field" id="campoUsuarioLogin">
         <label for="loginUsuario"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>Usuário</label>
         <div class="login-input-wrap">
           <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 20c0-3.3 3.1-5.8 7-5.8s7 2.5 7 5.8"></path></svg>
@@ -1058,6 +1069,7 @@ const fields = ['nome','custo','embalagens','outrosCustos','icms','pisCofins','c
 const USERS_KEY = 'usuariosSistema';
 const SESSION_KEY = 'sessaoAtual';
 const LOG_KEY = 'logAlteracoes';
+const LAST_USER_KEY = 'ultimoUsuarioLogin';
 
 async function hashSenha(senha, salt){
   const enc = new TextEncoder().encode(salt + '::' + senha);
@@ -1152,13 +1164,34 @@ function mostrarLogin(modo){
   $('formCadastroUsuario').style.display = usarCadastro ? 'block' : 'none';
   $('loginSwitch').style.display = primeiraVez ? 'none' : 'block';
   $('linkParaCadastroTexto').textContent = usarCadastro ? 'Já tenho usuário — fazer login' : 'Criar um novo usuário';
-  $('loginTitulo').textContent = usarCadastro ? 'Criar conta' : 'Bem-vindo!';
-  $('loginSub').textContent = primeiraVez
-    ? 'Nenhum usuário cadastrado ainda. Crie o primeiro acesso ao sistema.'
-    : (usarCadastro ? 'Crie um novo acesso ao sistema' : 'Acesse sua conta para continuar');
   $('loginErro').textContent = '';
   $('cadUsuarioErro').textContent = '';
+
+  const ultimoUsuario = localStorage.getItem(LAST_USER_KEY);
+  const dadosUltimo = ultimoUsuario ? usuarios.find(u => u.usuario === ultimoUsuario) : null;
+  const modoRapido = !usarCadastro && modo !== 'trocarUsuario' && !!dadosUltimo;
+
+  $('loginQuickUser').style.display = modoRapido ? 'block' : 'none';
+  $('campoUsuarioLogin').style.display = modoRapido ? 'none' : 'block';
+
+  if (modoRapido){
+    $('loginQuickNome').textContent = `Olá, ${dadosUltimo.nome.split(' ')[0]}!`;
+    $('loginUsuario').value = dadosUltimo.usuario;
+    $('loginTitulo').textContent = 'Bem-vindo de volta!';
+    $('loginSub').textContent = 'Digite sua senha para continuar';
+    setTimeout(() => $('loginSenha').focus(), 50);
+  } else {
+    $('loginTitulo').textContent = usarCadastro ? 'Criar conta' : 'Bem-vindo!';
+    $('loginSub').textContent = primeiraVez
+      ? 'Nenhum usuário cadastrado ainda. Crie o primeiro acesso ao sistema.'
+      : (usarCadastro ? 'Crie um novo acesso ao sistema' : 'Acesse sua conta para continuar');
+    if (!usarCadastro && modo === 'trocarUsuario') $('loginUsuario').value = '';
+  }
 }
+
+$('btnTrocarUsuario').addEventListener('click', () => {
+  mostrarLogin('trocarUsuario');
+});
 
 document.querySelectorAll('.toggle-senha').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1192,6 +1225,7 @@ $('formLogin').addEventListener('submit', async (e) => {
   if (hash !== u.senhaHash){ erroEl.textContent = 'Usuário ou senha incorretos.'; return; }
 
   setSessao({ id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel || 'Usuário' }, $('loginLembrar').checked);
+  localStorage.setItem(LAST_USER_KEY, u.usuario);
   $('loginSenha').value = '';
   mostrarApp();
   registrarLog('Login', `${u.nome} entrou no sistema`);
@@ -1225,6 +1259,7 @@ $('formCadastroUsuario').addEventListener('submit', async (e) => {
   usuarios.push(novo);
   saveUsuarios(usuarios);
   setSessao({ id: novo.id, usuario: novo.usuario, nome: novo.nome, papel: novo.papel }, true);
+  localStorage.setItem(LAST_USER_KEY, novo.usuario);
 
   $('novoNome').value = '';
   $('novoUsuario').value = '';
