@@ -426,8 +426,10 @@
     background:radial-gradient(circle at 35% 30%, rgba(147,197,253,.25), rgba(30,58,138,.15));
     border:1.5px solid rgba(96,165,250,.55);
     box-shadow:0 0 24px rgba(59,130,246,.35), inset 0 0 12px rgba(96,165,250,.15);
+    position:relative;overflow:hidden;
   }
   .login-avatar svg{width:34px;height:34px;stroke:#dbeafe;}
+  .login-avatar .avatar-logo-img{position:absolute;inset:0;width:100%;height:100%;}
   .login-box h1{font-size:21px;margin:0 0 4px;text-align:center;font-weight:700;color:#f3f6ff;}
   .login-box p.sub{font-size:12.5px;color:#93a4c3;margin:0 0 18px;text-align:center;line-height:1.5;}
   .login-divider-glow{height:1px;margin:0 0 22px;background:linear-gradient(90deg, transparent, rgba(96,165,250,.6), transparent);position:relative;}
@@ -529,6 +531,7 @@
 <div id="loginOverlay">
   <div class="login-box">
     <div class="login-avatar">
+      <img class="avatar-logo-img" alt="Maria Vitória Personalizados" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path></svg>
     </div>
     <h1 id="loginTitulo">Bem-vindo!</h1>
@@ -540,6 +543,7 @@
 
       <div class="login-quick-user" id="loginQuickUser" style="display:none;">
         <div class="login-avatar" style="width:52px;height:52px;margin:0 auto 10px;">
+          <img class="avatar-logo-img" alt="Maria Vitória Personalizados" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path></svg>
         </div>
         <p style="text-align:center;font-weight:700;font-size:15.5px;color:#f3f6ff;margin:0 0 2px;" id="loginQuickNome">Olá!</p>
@@ -659,6 +663,7 @@
   <div class="menu-backdrop" id="menuBackdrop"></div>
   <div class="menu-box">
     <div class="login-avatar">
+      <img class="avatar-logo-img" alt="Maria Vitória Personalizados" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path></svg>
     </div>
     <h2 id="menuSaudacao">Olá!</h2>
@@ -1198,6 +1203,20 @@ const STORAGE_KEY = 'margemMarkupProdutos';
 let editingId = null;
 
 const $ = id => document.getElementById(id);
+
+// Usa a logo da empresa (a mesma já embutida como ícone do app) como avatar no login e no
+// menu. Se por algum motivo a imagem não carregar, o ícone genérico de pessoa continua
+// aparecendo por baixo, então nada quebra.
+(function aplicarLogoNosAvatares(){
+  const linkLogo = document.querySelector('link[rel="apple-touch-icon"]');
+  const logoUri = linkLogo ? linkLogo.getAttribute('href') : null;
+  if (!logoUri) return;
+  document.querySelectorAll('.avatar-logo-img').forEach(img => {
+    img.src = logoUri;
+    img.onerror = () => { img.style.display = 'none'; };
+  });
+})();
+
 
 function toast(msg, tipo){
   const el = document.createElement('div');
