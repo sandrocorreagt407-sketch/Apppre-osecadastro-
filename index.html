@@ -852,6 +852,18 @@
         Nenhuma simulação salva ainda.<br>Preencha o formulário acima e clique em "Salvar simulação".
       </div>
     </div>
+
+    <div class="card" id="comboCard" style="display:none;">
+      <p class="section-label">TOTAL DO COMBO (SIMULAÇÕES SELECIONADAS)</p>
+      <div class="results" style="margin-bottom:10px;">
+        <div class="result-row"><span>Itens selecionados</span><span class="val num" id="comboQtdItens">0</span></div>
+        <div class="result-row"><span>Custo total</span><span class="val num" id="comboCustoTotal">R$ 0,00</span></div>
+        <div class="result-row"><span>Valor de venda total</span><span class="val num" id="comboVendaTotal">R$ 0,00</span></div>
+        <div class="result-row"><span>Lucro total</span><span class="val num" id="comboLucroTotal">R$ 0,00</span></div>
+        <div class="result-row"><span>Margem média</span><span class="val num" id="comboMargemMedia">0%</span></div>
+      </div>
+      <button class="btn-secondary" id="btnLimparCombo">Desmarcar todas</button>
+    </div>
   </div>
 
   <!-- VENDAS VIEW -->
@@ -1851,6 +1863,7 @@ function excluirProduto(id){
   if (!confirm(`Excluir a simulação "${p ? p.nome : ''}"? Essa ação não pode ser desfeita.`)) return;
   let list = getProducts().filter(x => x.id !== id);
   saveProducts(list);
+  comboSelecionados.delete(id);
   renderLista();
   registrarLog('Simulação excluída', `"${p ? p.nome : ''}"`);
   toast(`🗑️ Simulação "${p ? p.nome : ''}" excluída.`, 'danger');
@@ -1873,12 +1886,16 @@ function renderLista(){
     const qtd = p.quantidade || 1;
     const loteMeta = qtd > 1 ? ` · Qtd: ${qtd} · Lote: ${fmtBRL(p.preco*qtd)}` : '';
     const descontoMeta = p.descontoAplicado ? ` · Desconto simulado: ${fmtPct(p.descontoAplicado)}` : '';
+    const marcado = comboSelecionados.has(p.id);
     el.innerHTML = `
       <div class="product-top">
-        <div>
-          <div class="product-name">${escapeHtml(p.nome)}</div>
-          <div class="product-meta">Custo unit.: ${fmtBRL(p.custo + (p.embalagens||0) + p.outrosCustos)} · Venda unit.: ${fmtBRL(p.preco)}${loteMeta}${descontoMeta}</div>
-        </div>
+        <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;">
+          <input type="checkbox" class="combo-checkbox" data-id="${p.id}" ${marcado ? 'checked' : ''} style="margin-top:4px;width:17px;height:17px;flex-shrink:0;">
+          <div>
+            <div class="product-name">${escapeHtml(p.nome)}</div>
+            <div class="product-meta">Custo unit.: ${fmtBRL(p.custo + (p.embalagens||0) + p.outrosCustos)} · Venda unit.: ${fmtBRL(p.preco)}${loteMeta}${descontoMeta}</div>
+          </div>
+        </label>
       </div>
       <div class="product-metrics">
         <div class="metric">
@@ -1909,7 +1926,49 @@ function renderLista(){
       else excluirProduto(id);
     });
   });
+
+  container.querySelectorAll('.combo-checkbox').forEach(chk => {
+    chk.addEventListener('change', () => {
+      if (chk.checked) comboSelecionados.add(chk.dataset.id);
+      else comboSelecionados.delete(chk.dataset.id);
+      atualizarCombo();
+    });
+  });
+  atualizarCombo();
 }
+
+// ===== COMBO/KIT: soma de várias simulações selecionadas =====
+let comboSelecionados = new Set();
+
+function atualizarCombo(){
+  const selecionados = getProducts().filter(p => comboSelecionados.has(p.id));
+  const card = $('comboCard');
+  if (selecionados.length === 0){
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+
+  let custoTotal = 0, vendaTotal = 0, lucroTotal = 0;
+  selecionados.forEach(p => {
+    const qtd = p.quantidade || 1;
+    custoTotal += (p.custo + (p.embalagens||0) + p.outrosCustos) * qtd;
+    vendaTotal += p.preco * qtd;
+    lucroTotal += (p.lucroLote != null ? p.lucroLote : p.lucro * qtd);
+  });
+  const margemMedia = vendaTotal > 0 ? (lucroTotal / vendaTotal) * 100 : 0;
+
+  $('comboQtdItens').textContent = selecionados.length;
+  $('comboCustoTotal').textContent = fmtBRL(custoTotal);
+  $('comboVendaTotal').textContent = fmtBRL(vendaTotal);
+  $('comboLucroTotal').textContent = fmtBRL(lucroTotal);
+  $('comboMargemMedia').textContent = fmtPct(margemMedia);
+}
+
+$('btnLimparCombo').addEventListener('click', () => {
+  comboSelecionados.clear();
+  renderLista();
+});
 
 function escapeHtml(str){
   const d = document.createElement('div');
