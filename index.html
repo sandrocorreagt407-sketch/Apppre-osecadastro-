@@ -522,6 +522,9 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -643,6 +646,7 @@
     <h1>Maria Vitória Personalizados</h1>
     <p>Calculadora de preços com impostos e custos</p>
     <div id="autosaveIndicator"></div>
+    <div id="syncBadge" style="font-size:11px;font-weight:600;margin-top:4px;">💾 Local</div>
   </div>
   <div class="header-actions">
     <button type="button" class="menu-trigger" id="btnAbrirMenu" title="Abrir menu">
@@ -680,6 +684,11 @@
       <button type="button" class="menu-item" data-view="equip">
         <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 2.3v4.6L12 11 8 8.9V4.3L12 2z"></path><path d="M4 12.3l4-2.3v4.6L4 17l-4-2.3v-4.6z" transform="translate(2,0)"></path><path d="M12 13l4 2.3v4.6L12 22l-4-2.3v-4.6z"></path></svg>
         <span>Uso</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" class="menu-item" data-view="clientes">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2"></path></svg>
+        <span>Clientes</span>
         <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </button>
       <button type="button" class="menu-item" data-view="relatorios">
@@ -854,6 +863,12 @@
         <label for="vdData">Data da venda</label>
         <input type="date" id="vdData">
       </div>
+      <div class="field">
+        <label for="vdCliente">Cliente (opcional)</label>
+        <select id="vdCliente" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;">
+          <option value="">Sem cliente vinculado</option>
+        </select>
+      </div>
     </div>
 
     <div class="card">
@@ -912,6 +927,42 @@
 
   </div>
 
+  <!-- CLIENTES VIEW -->
+  <div class="view" id="view-clientes">
+
+    <div class="card">
+      <p class="section-label">NOVO CLIENTE</p>
+      <div class="field">
+        <label for="cliNome">Nome</label>
+        <input type="text" id="cliNome" placeholder="Nome do cliente">
+      </div>
+      <div class="field">
+        <label for="cliTelefone">Telefone / WhatsApp</label>
+        <input type="tel" id="cliTelefone" placeholder="(00) 00000-0000">
+      </div>
+      <div class="field">
+        <label for="cliAniversario">Aniversário (opcional)</label>
+        <input type="date" id="cliAniversario">
+      </div>
+      <div class="field">
+        <label for="cliObs">Observações (preferências, endereço...)</label>
+        <input type="text" id="cliObs" placeholder="Ex: prefere embalagem rosa, mora no centro...">
+      </div>
+      <button class="btn-primary" id="btnCliSalvar">Salvar cliente</button>
+      <button class="btn-secondary" id="btnCliLimpar">Limpar formulário</button>
+    </div>
+
+    <div class="card">
+      <p class="section-label">CLIENTES CADASTRADOS</p>
+      <input type="text" id="cliBusca" placeholder="Buscar cliente por nome ou telefone..." style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;margin-bottom:12px;">
+      <div id="listaClientes"></div>
+      <div class="empty-state" id="cliEmptyState" style="display:none;">
+        Nenhum cliente cadastrado ainda.
+      </div>
+    </div>
+
+  </div>
+
   <!-- RELATÓRIOS VIEW -->
   <div class="view" id="view-relatorios">
 
@@ -933,6 +984,7 @@
     <div class="card">
       <p class="section-label">BACKUP DOS DADOS</p>
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Os dados ficam salvos só neste aparelho. Exporte um backup para não perder nada ao trocar de celular ou limpar o navegador.</p>
+      <div id="avisoBackupAtrasado" style="display:none;background:#fff3cd;border:1px solid #e6c34a;color:#6b5205;border-radius:6px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.5;"></div>
       <button class="btn-primary" id="btnExportarBackup">Exportar backup (.json)</button>
       <label for="inputImportarBackup" class="btn-secondary" style="display:block;text-align:center;cursor:pointer;">Importar backup (.json)</label>
       <input type="file" id="inputImportarBackup" accept="application/json,.json" style="display:none;">
@@ -960,6 +1012,11 @@
         <div class="result-row"><span>Total de custo</span><span class="val num" id="relCustoTotal">R$ 0,00</span></div>
         <div class="result-row"><span>Unidades vendidas</span><span class="val num" id="relUnidVendidas">0</span></div>
       </div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">FATURAMENTO POR MÊS (últimos 6 meses)</p>
+      <div class="chart-wrap" id="chartFaturamentoMensal"></div>
     </div>
 
     <div class="card">
@@ -1067,6 +1124,19 @@
         <label for="cadNome">Nome do produto</label>
         <input type="text" id="cadNome" placeholder="Ex: Caneca de porcelana branca">
       </div>
+      <div class="field">
+        <label for="cadCategoria">Categoria</label>
+        <input type="text" id="cadCategoria" list="cadCategoriasSugeridas" placeholder="Ex: Canecas, Camisetas, Bijuterias...">
+        <datalist id="cadCategoriasSugeridas"></datalist>
+      </div>
+      <div class="field">
+        <label for="cadFoto">Foto do produto (opcional)</label>
+        <input type="file" id="cadFoto" accept="image/*">
+        <div id="cadFotoPreviewBox" style="display:none;margin-top:10px;position:relative;width:120px;">
+          <img id="cadFotoPreview" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;">
+          <button type="button" id="btnRemoverFoto" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--loss);color:#fff;border:none;font-size:13px;cursor:pointer;">✕</button>
+        </div>
+      </div>
       <div class="row2">
         <div class="field">
           <label for="cadPrecoCusto">Preço de custo — por unidade (R$)</label>
@@ -1106,8 +1176,11 @@
 
     <div id="cadAlertaEstoque" style="display:none;background:#fff3cd;border:1px solid #e6c34a;color:#6b5205;border-radius:6px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.5;"></div>
 
-    <div class="search-box">
-      <input type="text" id="cadBusca" placeholder="Buscar produto no cadastro...">
+    <div class="search-box" style="display:flex;gap:8px;">
+      <input type="text" id="cadBusca" placeholder="Buscar produto no cadastro..." style="flex:1;">
+      <select id="cadFiltroCategoria" style="padding:10px 8px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);font-family:inherit;font-size:13px;">
+        <option value="">Todas categorias</option>
+      </select>
     </div>
     <div id="listaCadastro"></div>
     <div class="empty-state" id="cadEmptyState" style="display:none;">
@@ -1144,6 +1217,126 @@ function toast(msg, tipo){
 }
 const fields = ['nome','custo','embalagens','outrosCustos','icms','pisCofins','comissao','cartao','outrosPct','preco','quantidade','descontoAplicado','margemMinima'];
 
+// ===================================================================================
+// ===== SINCRONIZAÇÃO ENTRE APARELHOS (Firebase Firestore) =====
+// ===================================================================================
+// COMO ATIVAR (passo a passo):
+//   1. Acesse https://console.firebase.google.com e crie um projeto novo (gratuito).
+//   2. No menu lateral: Compilação > Firestore Database > "Criar banco de dados"
+//      (escolha "Iniciar em modo de produção" e a região mais próxima, ex: southamerica-east1).
+//   3. No menu lateral: Compilação > Authentication > guia "Sign-in method" >
+//      ative o provedor "Anônimo". (é o que permite o app se conectar com segurança,
+//      sem precisar criar um login separado pro Firebase)
+//   4. No ícone de engrenagem > "Configurações do projeto" > aba "Geral" > role até
+//      "Seus apps" > clique no ícone "</>" (Web) > registre um app (qualquer nome) >
+//      copie o objeto "firebaseConfig" que aparece e cole substituindo o objeto abaixo.
+//   5. Ainda no Firestore, na aba "Regras", cole isto e publique:
+//        rules_version = '2';
+//        service cloud.firestore {
+//          match /databases/{database}/documents {
+//            match /{document=**} {
+//              allow read, write: if request.auth != null;
+//            }
+//          }
+//        }
+//   6. Salve este arquivo e reabra o app — o badge no topo deve virar "☁️ Sincronizado".
+//
+// Enquanto o firebaseConfig abaixo não for preenchido, o app continua funcionando
+// 100% normalmente, só que salvando apenas neste aparelho (como já fazia antes).
+const firebaseConfig = {
+  apiKey: "COLE_AQUI",
+  authDomain: "COLE_AQUI",
+  projectId: "COLE_AQUI",
+  storageBucket: "COLE_AQUI",
+  messagingSenderId: "COLE_AQUI",
+  appId: "COLE_AQUI"
+};
+
+const firebaseConfigurado = !!(firebaseConfig.apiKey && firebaseConfig.apiKey !== "COLE_AQUI");
+let db = null;
+let syncStatus = firebaseConfigurado ? 'conectando' : 'desativado'; // desativado | conectando | online | offline
+
+function atualizarBadgeSync(){
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  const estados = {
+    desativado: { texto: '💾 Local (Firebase não configurado)', cor: 'var(--muted)' },
+    conectando: { texto: '🔄 Conectando à nuvem...', cor: 'var(--muted)' },
+    online:     { texto: '☁️ Sincronizado', cor: 'var(--profit)' },
+    offline:    { texto: '📴 Offline — salvando local, sincroniza ao reconectar', cor: '#b98900' }
+  };
+  const e = estados[syncStatus] || estados.desativado;
+  el.textContent = e.texto;
+  el.style.color = e.cor;
+}
+
+if (firebaseConfigurado){
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    firebase.auth().signInAnonymously().catch(err => {
+      console.error('Falha ao autenticar no Firebase:', err);
+      syncStatus = 'offline';
+      atualizarBadgeSync();
+    });
+    firebase.auth().onAuthStateChanged(user => {
+      syncStatus = user ? 'online' : 'offline';
+      atualizarBadgeSync();
+    });
+    window.addEventListener('online', () => { if (firebase.auth().currentUser) { syncStatus = 'online'; atualizarBadgeSync(); } });
+    window.addEventListener('offline', () => { syncStatus = 'offline'; atualizarBadgeSync(); });
+  } catch(err){
+    console.error('Erro ao iniciar o Firebase:', err);
+    db = null;
+    syncStatus = 'desativado';
+  }
+}
+atualizarBadgeSync();
+
+// Cria uma "coleção sincronizada": por fora, continua se comportando como o localStorage
+// de sempre (métodos .get() síncrono e .save(lista) que grava tudo de uma vez) — mas por
+// dentro, se o Firebase estiver configurado, espelha tudo em tempo real pro Firestore,
+// e mantém uma cópia local (localStorage) pra abrir instantâneo e funcionar offline.
+function criarColecaoSincronizada(nomeColecao, localStorageKeyFallback){
+  let cache = [];
+  try{ cache = JSON.parse(localStorage.getItem(localStorageKeyFallback)) || []; } catch(e){ cache = []; }
+
+  if (db){
+    db.collection(nomeColecao).onSnapshot(snap => {
+      cache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      try{ localStorage.setItem(localStorageKeyFallback, JSON.stringify(cache)); } catch(e){}
+      const callback = window['renderAposSync_' + nomeColecao];
+      if (typeof callback === 'function') callback();
+    }, err => {
+      console.error(`Erro ao sincronizar "${nomeColecao}":`, err);
+    });
+  }
+
+  return {
+    get: () => cache,
+    save: (novaLista) => {
+      cache = novaLista;
+      try{ localStorage.setItem(localStorageKeyFallback, JSON.stringify(novaLista)); } catch(e){}
+      if (!db) return;
+      const idsNovos = new Set(novaLista.map(i => i.id));
+      let idsAntigos = [];
+      try{ idsAntigos = JSON.parse(localStorage.getItem(localStorageKeyFallback + '_idsAntigos') || '[]'); } catch(e){}
+      const batch = db.batch();
+      novaLista.forEach(item => {
+        const { id, ...dados } = item;
+        batch.set(db.collection(nomeColecao).doc(String(id)), dados);
+      });
+      idsAntigos.forEach(id => {
+        if (!idsNovos.has(id)) batch.delete(db.collection(nomeColecao).doc(String(id)));
+      });
+      batch.commit().catch(err => console.error(`Erro ao salvar "${nomeColecao}" na nuvem:`, err));
+      try{ localStorage.setItem(localStorageKeyFallback + '_idsAntigos', JSON.stringify([...idsNovos])); } catch(e){}
+    }
+  };
+}
+
+
 // ===== MÓDULO: LOGIN / USUÁRIOS / SESSÃO =====
 const USERS_KEY = 'usuariosSistema';
 const SESSION_KEY = 'sessaoAtual';
@@ -1156,11 +1349,18 @@ async function hashSenha(senha, salt){
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-function getUsuarios(){
-  try{ return JSON.parse(localStorage.getItem(USERS_KEY)) || []; }
-  catch(e){ return []; }
-}
-function saveUsuarios(list){ localStorage.setItem(USERS_KEY, JSON.stringify(list)); }
+// Sincroniza usuários com a nuvem, mas com cuidado: no 1º carregamento do app num aparelho
+// novo (sem nada salvo localmente ainda), aguarda a 1ª resposta do Firestore antes de decidir
+// se mostra "criar primeiro usuário" — pra não achar que não existe ninguém só porque ainda
+// não deu tempo de baixar a lista da nuvem.
+let usuariosPrimeiraSincronizacaoOk = !firebaseConfigurado;
+const usuariosSync = criarColecaoSincronizada('usuarios', USERS_KEY);
+function getUsuarios(){ return usuariosSync.get(); }
+function saveUsuarios(list){ usuariosSync.save(list); }
+window.renderAposSync_usuarios = () => {
+  usuariosPrimeiraSincronizacaoOk = true;
+  if (typeof reavaliarTelaLogin === 'function') reavaliarTelaLogin();
+};
 
 function getSessao(){
   try{
@@ -1186,6 +1386,16 @@ function limparSessao(){
 function usuarioAtual(){
   const s = getSessao();
   return s ? s.nome : 'Desconhecido';
+}
+
+function souAdministrador(){
+  const s = getSessao();
+  return !!(s && s.papel === 'Administrador');
+}
+function exigirAdmin(mensagem){
+  if (souAdministrador()) return true;
+  toast(`🔒 ${mensagem || 'Essa ação é restrita ao Administrador.'}`, 'danger');
+  return false;
 }
 
 function getLog(){
@@ -1236,6 +1446,17 @@ function mostrarApp(){
 function mostrarLogin(modo){
   $('appContent').style.display = 'none';
   $('loginOverlay').style.display = 'flex';
+
+  if (modo === 'carregando'){
+    $('formLogin').style.display = 'none';
+    $('formCadastroUsuario').style.display = 'none';
+    $('loginSwitch').style.display = 'none';
+    $('loginQuickUser').style.display = 'none';
+    $('loginTitulo').textContent = 'Só um instante...';
+    $('loginSub').textContent = 'Conectando com a nuvem para carregar seus dados.';
+    return;
+  }
+
   const usuarios = getUsuarios();
   const primeiraVez = usuarios.length === 0;
   const usarCadastro = modo === 'cadastro' || primeiraVez;
@@ -1360,14 +1581,35 @@ $('btnSairMenu').addEventListener('click', () => {
 
 (function initAuth(){
   const sessao = getSessao();
-  const usuarios = getUsuarios();
-  if (sessao && usuarios.some(u => u.id === sessao.id)){
+  if (sessao){
+    // Confia na sessão salva neste aparelho e mostra o app direto — evita a tela de
+    // login "piscar" enquanto a lista de usuários ainda está baixando da nuvem.
+    // Se depois de sincronizar a conta não existir mais, desloga (reavaliarTelaLogin).
     mostrarApp();
+    return;
+  }
+  const usuarios = getUsuarios();
+  if (!usuariosPrimeiraSincronizacaoOk && usuarios.length === 0){
+    mostrarLogin('carregando');
   } else {
-    if (sessao) limparSessao();
     mostrarLogin(usuarios.length === 0 ? 'cadastro' : 'login');
   }
 })();
+
+function reavaliarTelaLogin(){
+  const sessao = getSessao();
+  const usuarios = getUsuarios();
+  if (sessao){
+    if (!usuarios.some(u => u.id === sessao.id)){
+      limparSessao();
+      mostrarLogin(usuarios.length === 0 ? 'cadastro' : 'login');
+    }
+    return;
+  }
+  if ($('loginOverlay').style.display !== 'none'){
+    mostrarLogin(usuarios.length === 0 ? 'cadastro' : 'login');
+  }
+}
 
 
 function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
@@ -1540,8 +1782,9 @@ function switchView(name){
   document.querySelectorAll('.menu-item[data-view]').forEach(t => t.classList.toggle('active', t.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   $('view-' + name).classList.add('active');
-  if (name === 'vendas'){ popularSelectProdutos(); renderVendas(); renderCarrinho(); }
+  if (name === 'vendas'){ popularSelectProdutos(); popularSelectClientes(); renderVendas(); renderCarrinho(); }
   if (name === 'relatorios'){ renderRelatorios(); }
+  if (name === 'clientes'){ renderClientes(); }
 }
 document.querySelectorAll('.menu-item[data-view]').forEach(t => t.addEventListener('click', () => {
   switchView(t.dataset.view);
@@ -1590,6 +1833,7 @@ function editarProduto(id){
 }
 
 function excluirProduto(id){
+  if (!exigirAdmin('Somente o Administrador pode excluir simulações.')) return;
   const p = getProducts().find(x => x.id === id);
   if (!confirm(`Excluir a simulação "${p ? p.nome : ''}"? Essa ação não pode ser desfeita.`)) return;
   let list = getProducts().filter(x => x.id !== id);
@@ -1666,11 +1910,10 @@ $('busca').addEventListener('input', renderLista);
 const EQUIP_KEY = 'produtosUso';
 let editingEquipId = null;
 
-function getEquip(){
-  try{ return JSON.parse(localStorage.getItem(EQUIP_KEY)) || []; }
-  catch(e){ return []; }
-}
-function saveEquip(list){ localStorage.setItem(EQUIP_KEY, JSON.stringify(list)); }
+const equipSync = criarColecaoSincronizada('produtosUso', EQUIP_KEY);
+function getEquip(){ return equipSync.get(); }
+function saveEquip(list){ equipSync.save(list); }
+window.renderAposSync_produtosUso = () => { if (typeof renderEquip === 'function') renderEquip(); };
 
 function atualizarSubtotalEquip(){
   const valor = num($('eqValor').value);
@@ -1742,6 +1985,7 @@ function editarEquip(id){
 }
 
 function excluirEquip(id){
+  if (!exigirAdmin('Somente o Administrador pode excluir produtos de uso.')) return;
   const item = getEquip().find(i => i.id === id);
   if (!confirm(`Excluir o produto de uso "${item ? item.nome : ''}"? Essa ação não pode ser desfeita.`)) return;
   saveEquip(getEquip().filter(i => i.id !== id));
@@ -1814,11 +2058,10 @@ renderEquip();
 const VENDAS_KEY = 'vendasRegistradas';
 const META_KEY = 'metaQuantidadeVendida';
 
-function getVendas(){
-  try{ return JSON.parse(localStorage.getItem(VENDAS_KEY)) || []; }
-  catch(e){ return []; }
-}
-function saveVendas(list){ localStorage.setItem(VENDAS_KEY, JSON.stringify(list)); }
+const vendasSync = criarColecaoSincronizada('vendas', VENDAS_KEY);
+function getVendas(){ return vendasSync.get(); }
+function saveVendas(list){ vendasSync.save(list); }
+window.renderAposSync_vendas = () => { if (typeof renderVendas === 'function') renderVendas(); };
 
 function popularSelectProdutos(){
   const sel = $('vdProduto');
@@ -1898,6 +2141,18 @@ $('btnVdAdicionar').addEventListener('click', () => {
   const desconto = Math.min(100, Math.max(0, num($('vdDesconto').value)));
   const precoUsado = p.precoVenda * (1 - desconto/100);
   const lucroUnit = precoUsado - p.precoCusto;
+
+  const jaNoCarrinho = qtdJaNoCarrinho(produtoId);
+  const estoqueApos = (p.quantidade || 0) - jaNoCarrinho - qtd;
+  if (estoqueApos < 0){
+    const confirmou = confirm(
+      `⚠️ Estoque insuficiente!\n\n"${p.nome}" tem ${p.quantidade || 0} un. em estoque` +
+      (jaNoCarrinho > 0 ? ` (${jaNoCarrinho} já reservada(s) no carrinho)` : '') +
+      `.\nAdicionar ${qtd} un. deixaria o estoque em ${estoqueApos} (negativo).\n\n` +
+      `Deseja adicionar mesmo assim?`
+    );
+    if (!confirmou) return;
+  }
 
   const existente = carrinhoVenda.find(i => i.produtoId === produtoId);
   if (existente){
@@ -2013,6 +2268,9 @@ $('btnFinalizarVenda').addEventListener('click', () => {
   const agora = new Date().toISOString();
   const responsavel = usuarioAtual();
   const totalItensPedido = carrinhoVenda.length;
+  const clienteId = $('vdCliente').value || null;
+  const clienteObj = clienteId ? getClientes().find(c => c.id === clienteId) : null;
+  const clienteNome = clienteObj ? clienteObj.nome : null;
 
   const vendas = getVendas();
   carrinhoVenda.forEach(item => {
@@ -2022,6 +2280,8 @@ $('btnFinalizarVenda').addEventListener('click', () => {
       itensNoPedido: carrinhoVenda.length,
       produtoId: item.produtoId,
       produtoNome: item.produtoNome,
+      clienteId,
+      clienteNome,
       data,
       quantidade: item.quantidade,
       descontoAplicado: item.desconto,
@@ -2050,15 +2310,18 @@ $('btnFinalizarVenda').addEventListener('click', () => {
 
   const totalFinal = valorTotal;
   carrinhoVenda = [];
+  $('vdCliente').value = '';
   renderCarrinho();
   popularSelectProdutos();
   renderVendas();
   renderCadastro();
-  registrarLog('Venda finalizada', `${totalItensPedido} item(ns), ${qtdTotal} un. — ${fmtBRL(totalFinal)}`);
+  renderClientes();
+  registrarLog('Venda finalizada', `${totalItensPedido} item(ns), ${qtdTotal} un. — ${fmtBRL(totalFinal)}${clienteNome ? ' — cliente: ' + clienteNome : ''}`);
   toast(`✅ Venda finalizada — ${qtdTotal} un. em ${fmtBRL(totalFinal)}.`, 'success');
 });
 
 function excluirVenda(id){
+  if (!exigirAdmin('Somente o Administrador pode excluir vendas.')) return;
   const venda = getVendas().find(v => v.id === id);
   if (!confirm(`Excluir a venda de "${venda ? venda.produtoNome : ''}"? O estoque do produto no Cadastro será restaurado. Essa ação não pode ser desfeita.`)) return;
   const vendas = getVendas();
@@ -2079,6 +2342,50 @@ function excluirVenda(id){
   toast(`🗑️ Venda de "${venda ? venda.produtoNome : ''}" excluída — estoque restaurado.`, 'danger');
 }
 
+// ===== COMPROVANTE DE VENDA (recibo em texto, pronto pra compartilhar no WhatsApp) =====
+function gerarComprovanteVenda(vendaId){
+  const venda = getVendas().find(v => v.id === vendaId);
+  if (!venda) return;
+  // reúne todos os itens da mesma venda (mesmo pedidoId), ou só este item se não tiver pedido
+  const itens = venda.pedidoId
+    ? getVendas().filter(v => v.pedidoId === venda.pedidoId)
+    : [venda];
+
+  const dataFmt = new Date(venda.data + 'T00:00:00').toLocaleDateString('pt-BR');
+  let totalGeral = 0;
+  const linhas = [];
+  linhas.push('MARIA VITÓRIA PERSONALIZADOS');
+  linhas.push('COMPROVANTE DE VENDA');
+  linhas.push('='.repeat(32));
+  linhas.push(`Data: ${dataFmt}`);
+  if (venda.clienteNome) linhas.push(`Cliente: ${venda.clienteNome}`);
+  linhas.push('-'.repeat(32));
+  itens.forEach(it => {
+    totalGeral += it.valorVenda;
+    linhas.push(`${it.quantidade}x ${it.produtoNome}`);
+    linhas.push(`   ${fmtBRL(it.precoUsado)} un.${it.descontoAplicado ? ' (desconto ' + fmtPct(it.descontoAplicado) + ')' : ''} = ${fmtBRL(it.valorVenda)}`);
+  });
+  linhas.push('-'.repeat(32));
+  linhas.push(`TOTAL: ${fmtBRL(totalGeral)}`);
+  linhas.push('');
+  linhas.push('Obrigado pela compra! 💛');
+  const texto = linhas.join('\n');
+  const nomeArquivo = `comprovante-${venda.data}-${vendaId}.txt`;
+
+  if (navigator.share){
+    navigator.share({ text: texto, title: 'Comprovante de venda' }).catch(() => {});
+  } else {
+    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nomeArquivo;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  registrarLog('Comprovante gerado', `Venda de ${dataFmt} — ${fmtBRL(totalGeral)}`);
+  toast('🧾 Comprovante gerado.', 'success');
+}
+
 function renderVendas(){
   const busca = ($('vdBusca').value || '').trim().toLowerCase();
   const vendas = getVendas()
@@ -2093,11 +2400,12 @@ function renderVendas(){
     el.className = 'product-card';
     const dataFmt = new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR');
     const tagPedido = v.itensNoPedido > 1 ? ` · parte de uma venda com ${v.itensNoPedido} itens` : '';
+    const tagCliente = v.clienteNome ? ` · 👤 ${escapeHtml(v.clienteNome)}` : '';
     el.innerHTML = `
       <div class="product-top">
         <div>
           <div class="product-name">${escapeHtml(v.produtoNome)}</div>
-          <div class="product-meta">${dataFmt} · ${v.quantidade} un. × ${fmtBRL(v.precoUsado)}${v.descontoAplicado ? ' · desconto ' + fmtPct(v.descontoAplicado) : ''}${tagPedido}</div>
+          <div class="product-meta">${dataFmt} · ${v.quantidade} un. × ${fmtBRL(v.precoUsado)}${v.descontoAplicado ? ' · desconto ' + fmtPct(v.descontoAplicado) : ''}${tagPedido}${tagCliente}</div>
         </div>
       </div>
       <div class="product-metrics">
@@ -2111,6 +2419,7 @@ function renderVendas(){
         </div>
       </div>
       <div class="product-actions">
+        <button class="btn-secondary" data-id="${v.id}" data-action="comprovante" style="flex:none;">🧾 Comprovante</button>
         <button class="btn-delete" data-id="${v.id}" data-action="delete" style="flex:none;">Excluir</button>
       </div>
     `;
@@ -2119,6 +2428,9 @@ function renderVendas(){
 
   container.querySelectorAll('button[data-action="delete"]').forEach(btn => {
     btn.addEventListener('click', () => excluirVenda(btn.dataset.id));
+  });
+  container.querySelectorAll('button[data-action="comprovante"]').forEach(btn => {
+    btn.addEventListener('click', () => gerarComprovanteVenda(btn.dataset.id));
   });
 }
 $('vdBusca').addEventListener('input', renderVendas);
@@ -2142,10 +2454,30 @@ function vendasNoPeriodo(periodo){
   });
 }
 
+function atualizarAvisoBackup(){
+  const box = $('avisoBackupAtrasado');
+  if (!box) return;
+  const ultimo = localStorage.getItem(ULTIMO_BACKUP_KEY);
+  const LIMITE_DIAS = 7;
+  if (!ultimo){
+    box.style.display = 'block';
+    box.innerHTML = '⚠️ Você ainda não exportou nenhum backup. Exporte um agora pra não correr o risco de perder os dados.';
+    return;
+  }
+  const dias = Math.floor((Date.now() - new Date(ultimo).getTime()) / 86400000);
+  if (dias >= LIMITE_DIAS){
+    box.style.display = 'block';
+    box.innerHTML = `⚠️ Seu último backup foi há <strong>${dias} dia${dias === 1 ? '' : 's'}</strong>. Exporte um novo pra manter os dados protegidos.`;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
 function renderRelatorios(){
   const periodo = $('relPeriodo').value;
   const vendas = vendasNoPeriodo(periodo);
   renderHistorico();
+  atualizarAvisoBackup();
 
   let totalVendido = 0, totalCusto = 0, totalLucro = 0, totalUnid = 0;
   vendas.forEach(v => {
@@ -2165,10 +2497,28 @@ function renderRelatorios(){
   boxLucro.classList.add(totalLucro >= 0 ? 'positive' : 'negative');
 
   renderChartLucroMensal();
+  renderChartFaturamentoMensal();
   renderMeta();
   renderEstoqueRelatorio();
 }
 $('relPeriodo').addEventListener('change', renderRelatorios);
+
+function renderChartFaturamentoMensal(){
+  const vendas = getVendas();
+  const hoje = new Date();
+  const meses = [];
+  for (let i = 5; i >= 0; i--){
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    meses.push({ ano: d.getFullYear(), mes: d.getMonth(), label: d.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''), valor: 0 });
+  }
+  vendas.forEach(v => {
+    const d = new Date(v.data + 'T00:00:00');
+    const alvo = meses.find(m => m.ano === d.getFullYear() && m.mes === d.getMonth());
+    if (alvo) alvo.valor += v.valorVenda;
+  });
+
+  $('chartFaturamentoMensal').innerHTML = buildBarChartSVG(meses);
+}
 
 function renderChartLucroMensal(){
   const vendas = getVendas();
@@ -2338,13 +2688,13 @@ restaurarRascunho();
 
 // ===== MÓDULO: CADASTRO DE PRODUTOS (ESTOQUE) — separado da calculadora de margem =====
 const CADASTRO_KEY = 'cadastroProdutosEstoque';
+const ULTIMO_BACKUP_KEY = 'ultimoBackupExportadoEm';
 let editingCadastroId = null;
 
-function getCadastro(){
-  try{ return JSON.parse(localStorage.getItem(CADASTRO_KEY)) || []; }
-  catch(e){ return []; }
-}
-function saveCadastro(list){ localStorage.setItem(CADASTRO_KEY, JSON.stringify(list)); }
+const cadastroSync = criarColecaoSincronizada('cadastro', CADASTRO_KEY);
+function getCadastro(){ return cadastroSync.get(); }
+function saveCadastro(list){ cadastroSync.save(list); }
+window.renderAposSync_cadastro = () => { if (typeof renderCadastro === 'function') renderCadastro(); if (typeof popularSelectProdutos === 'function') popularSelectProdutos(); };
 
 function fmtDataBR(iso){
   if (!iso) return '—';
@@ -2352,22 +2702,68 @@ function fmtDataBR(iso){
   return `${dia}/${mes}/${ano}`;
 }
 
+let fotoAtualBase64 = null;
+
 function limparFormCadastro(){
   $('cadNome').value = '';
+  $('cadCategoria').value = '';
   $('cadPrecoCusto').value = '';
   $('cadPrecoVenda').value = '';
   $('cadQuantidade').value = '';
   $('cadDataEntrada').value = '';
   $('cadDataSaida').value = '';
   editingCadastroId = null;
+  fotoAtualBase64 = null;
+  $('cadFoto').value = '';
+  $('cadFotoPreviewBox').style.display = 'none';
   $('btnCadSalvar').textContent = 'Salvar produto';
   if (typeof limparRascunhoCadastro === 'function') limparRascunhoCadastro();
 }
 $('btnCadLimpar').addEventListener('click', limparFormCadastro);
 
+// Comprime a foto no navegador (máx. 400px, JPEG) antes de guardar — evita estourar o localStorage
+function comprimirImagem(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxLado = 400;
+        let { width, height } = img;
+        if (width > height && width > maxLado){ height *= maxLado / width; width = maxLado; }
+        else if (height > maxLado){ width *= maxLado / height; height = maxLado; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+$('cadFoto').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try{
+    fotoAtualBase64 = await comprimirImagem(file);
+    $('cadFotoPreview').src = fotoAtualBase64;
+    $('cadFotoPreviewBox').style.display = 'block';
+  } catch(err){
+    toast('Não foi possível carregar essa imagem.', 'danger');
+  }
+});
+$('btnRemoverFoto').addEventListener('click', () => {
+  fotoAtualBase64 = null;
+  $('cadFoto').value = '';
+  $('cadFotoPreviewBox').style.display = 'none';
+});
+
 // ===== SALVAMENTO AUTOMÁTICO (RASCUNHO DO FORMULÁRIO DE CADASTRO) =====
 const DRAFT_CAD_KEY = 'rascunhoCadastroAtual';
-const cadFields = ['cadNome','cadPrecoCusto','cadPrecoVenda','cadQuantidade','cadDataEntrada','cadDataSaida'];
+const cadFields = ['cadNome','cadCategoria','cadPrecoCusto','cadPrecoVenda','cadQuantidade','cadDataEntrada','cadDataSaida'];
 let draftCadTimeout = null;
 
 function salvarRascunhoCadastro(){
@@ -2442,6 +2838,8 @@ $('btnCadSalvar').addEventListener('click', () => {
   const item = {
     id: editingCadastroId || Date.now().toString(36),
     nome,
+    categoria: $('cadCategoria').value.trim(),
+    foto: fotoAtualBase64,
     precoCusto: num($('cadPrecoCusto').value),
     precoVenda: num($('cadPrecoVenda').value),
     quantidade: num($('cadQuantidade').value),
@@ -2600,12 +2998,15 @@ function exportarBackup(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  localStorage.setItem(ULTIMO_BACKUP_KEY, new Date().toISOString());
+  atualizarAvisoBackup();
   registrarLog('Backup exportado', 'Arquivo .json gerado');
   toast('✅ Backup exportado com sucesso.', 'success');
 }
 $('btnExportarBackup').addEventListener('click', exportarBackup);
 
 function importarBackup(file){
+  if (!exigirAdmin('Somente o Administrador pode importar um backup (isso substitui todos os dados atuais).')) return;
   const reader = new FileReader();
   reader.onload = (e) => {
     let dados;
@@ -2626,6 +3027,7 @@ function importarBackup(file){
       localStorage.setItem(META_KEY, dados.metaQuantidadeVendida);
     }
     registrarLog('Backup importado', `Restaurado por ${usuarioAtual()}`);
+    localStorage.setItem(ULTIMO_BACKUP_KEY, dados.geradoEm || new Date().toISOString());
 
     alert('Backup importado com sucesso! A página será recarregada e você precisará entrar novamente.');
     limparSessao();
@@ -2643,17 +3045,27 @@ function editarCadastro(id){
   const item = getCadastro().find(i => i.id === id);
   if (!item) return;
   $('cadNome').value = item.nome;
+  $('cadCategoria').value = item.categoria || '';
   $('cadPrecoCusto').value = item.precoCusto || '';
   $('cadPrecoVenda').value = item.precoVenda || '';
   $('cadQuantidade').value = item.quantidade || '';
   $('cadDataEntrada').value = item.dataEntrada || '';
   $('cadDataSaida').value = item.dataSaida || '';
+  fotoAtualBase64 = item.foto || null;
+  if (fotoAtualBase64){
+    $('cadFotoPreview').src = fotoAtualBase64;
+    $('cadFotoPreviewBox').style.display = 'block';
+  } else {
+    $('cadFotoPreviewBox').style.display = 'none';
+  }
+  $('cadFoto').value = '';
   editingCadastroId = item.id;
   $('btnCadSalvar').textContent = 'Atualizar produto';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function excluirCadastro(id){
+  if (!exigirAdmin('Somente o Administrador pode excluir produtos do Cadastro.')) return;
   const item = getCadastro().find(i => i.id === id);
   if (!confirm(`Excluir o produto "${item ? item.nome : ''}" do Cadastro? Essa ação não pode ser desfeita.`)) return;
   saveCadastro(getCadastro().filter(i => i.id !== id));
@@ -2666,13 +3078,23 @@ const ESTOQUE_BAIXO_LIMITE = 3;
 
 function renderCadastro(){
   const busca = ($('cadBusca').value || '').trim().toLowerCase();
+  const categoriaFiltro = $('cadFiltroCategoria').value;
   const listaCompleta = getCadastro();
   const list = listaCompleta
     .filter(i => !busca || i.nome.toLowerCase().includes(busca))
+    .filter(i => !categoriaFiltro || (i.categoria || '') === categoriaFiltro)
     .sort((a,b) => new Date(b.atualizadoEm) - new Date(a.atualizadoEm));
   const container = $('listaCadastro');
   container.innerHTML = '';
   $('cadEmptyState').style.display = list.length === 0 ? 'block' : 'none';
+
+  // categorias já usadas — alimenta sugestões do campo e o filtro da busca
+  const categorias = [...new Set(listaCompleta.map(p => p.categoria).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+  $('cadCategoriasSugeridas').innerHTML = categorias.map(c => `<option value="${escapeHtml(c)}">`).join('');
+  const filtroAtual = $('cadFiltroCategoria').value;
+  $('cadFiltroCategoria').innerHTML = '<option value="">Todas categorias</option>' +
+    categorias.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  $('cadFiltroCategoria').value = filtroAtual;
 
   const semSaida = listaCompleta.filter(p => !p.dataSaida);
   const zerados = semSaida.filter(p => (p.quantidade || 0) <= 0);
@@ -2708,9 +3130,10 @@ function renderCadastro(){
     const el = document.createElement('div');
     el.className = 'product-card';
     el.innerHTML = `
-      <div class="product-header">
+      <div class="product-header" style="display:flex;gap:10px;align-items:flex-start;">
+        ${p.foto ? `<img src="${p.foto}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex-shrink:0;">` : ''}
         <div>
-          <div class="product-name">${escapeHtml(p.nome)}</div>
+          <div class="product-name">${escapeHtml(p.nome)}${p.categoria ? ` <span style="font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;">${escapeHtml(p.categoria)}</span>` : ''}</div>
           <div class="product-meta">Custo unit.: ${fmtBRL(p.precoCusto)} · Venda unit.: ${fmtBRL(p.precoVenda)} · Qtd.: ${p.quantidade || 0}</div>
           <div class="product-meta">Entrada: ${fmtDataBR(p.dataEntrada)} · Saída: ${fmtDataBR(p.dataSaida)}</div>
         </div>
@@ -2743,7 +3166,150 @@ function renderCadastro(){
 }
 
 $('cadBusca').addEventListener('input', renderCadastro);
+$('cadFiltroCategoria').addEventListener('change', renderCadastro);
 renderCadastro();
+
+// ===== MÓDULO: CLIENTES =====
+const CLIENTES_KEY = 'clientesCadastrados';
+let editingClienteId = null;
+
+const clientesSync = criarColecaoSincronizada('clientes', CLIENTES_KEY);
+function getClientes(){ return clientesSync.get(); }
+function saveClientes(list){ clientesSync.save(list); }
+window.renderAposSync_clientes = () => { if (typeof renderClientes === 'function') renderClientes(); if (typeof popularSelectClientes === 'function') popularSelectClientes(); };
+
+function limparFormCliente(){
+  $('cliNome').value = '';
+  $('cliTelefone').value = '';
+  $('cliAniversario').value = '';
+  $('cliObs').value = '';
+  editingClienteId = null;
+  $('btnCliSalvar').textContent = 'Salvar cliente';
+}
+$('btnCliLimpar').addEventListener('click', limparFormCliente);
+
+$('btnCliSalvar').addEventListener('click', () => {
+  const nome = $('cliNome').value.trim();
+  if (!nome){
+    $('cliNome').focus();
+    return;
+  }
+  const item = {
+    id: editingClienteId || Date.now().toString(36),
+    nome,
+    telefone: $('cliTelefone').value.trim(),
+    aniversario: $('cliAniversario').value || '',
+    observacoes: $('cliObs').value.trim(),
+    atualizadoEm: new Date().toISOString()
+  };
+  const eraEdicao = !!editingClienteId;
+  let list = getClientes();
+  if (editingClienteId){
+    list = list.map(c => c.id === editingClienteId ? item : c);
+  } else {
+    list.push(item);
+  }
+  saveClientes(list);
+  limparFormCliente();
+  renderClientes();
+  popularSelectClientes();
+  registrarLog(eraEdicao ? 'Cliente atualizado' : 'Cliente cadastrado', `"${item.nome}"`);
+  toast(eraEdicao ? `✅ Cliente "${item.nome}" atualizado.` : `✅ Cliente "${item.nome}" cadastrado.`, 'success');
+});
+
+function editarCliente(id){
+  const c = getClientes().find(x => x.id === id);
+  if (!c) return;
+  $('cliNome').value = c.nome;
+  $('cliTelefone').value = c.telefone || '';
+  $('cliAniversario').value = c.aniversario || '';
+  $('cliObs').value = c.observacoes || '';
+  editingClienteId = c.id;
+  $('btnCliSalvar').textContent = 'Atualizar cliente';
+  switchView('clientes');
+  $('cliNome').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function excluirCliente(id){
+  if (!exigirAdmin('Somente o Administrador pode excluir clientes.')) return;
+  const c = getClientes().find(x => x.id === id);
+  if (!confirm(`Excluir o cliente "${c ? c.nome : ''}"? As vendas já registradas não serão apagadas, só deixarão de mostrar o nome dele.`)) return;
+  saveClientes(getClientes().filter(x => x.id !== id));
+  renderClientes();
+  popularSelectClientes();
+  registrarLog('Cliente excluído', `"${c ? c.nome : ''}"`);
+  toast(`🗑️ Cliente "${c ? c.nome : ''}" excluído.`, 'danger');
+}
+
+function popularSelectClientes(){
+  const sel = $('vdCliente');
+  if (!sel) return;
+  const atual = sel.value;
+  const clientes = getClientes().sort((a,b) => a.nome.localeCompare(b.nome));
+  sel.innerHTML = '<option value="">Sem cliente vinculado</option>' +
+    clientes.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+  if (atual) sel.value = atual;
+}
+
+function renderClientes(){
+  const busca = ($('cliBusca').value || '').trim().toLowerCase();
+  const clientes = getClientes()
+    .filter(c => !busca || c.nome.toLowerCase().includes(busca) || (c.telefone||'').includes(busca))
+    .sort((a,b) => a.nome.localeCompare(b.nome));
+  const container = $('listaClientes');
+  container.innerHTML = '';
+  $('cliEmptyState').style.display = clientes.length === 0 ? 'block' : 'none';
+
+  const vendas = getVendas();
+  const hoje = new Date();
+
+  clientes.forEach(c => {
+    const comprasCliente = vendas.filter(v => v.clienteId === c.id);
+    const totalGasto = comprasCliente.reduce((s,v) => s + (v.valorVenda||0), 0);
+    let avisoAniversario = '';
+    if (c.aniversario){
+      const [, mes, dia] = c.aniversario.split('-').map(Number);
+      if (mes === hoje.getMonth()+1 && dia === hoje.getDate()) avisoAniversario = ' 🎂 Aniversário hoje!';
+    }
+    const el = document.createElement('div');
+    el.className = 'product-card';
+    el.innerHTML = `
+      <div class="product-header">
+        <div>
+          <div class="product-name">${escapeHtml(c.nome)}${avisoAniversario}</div>
+          <div class="product-meta">${c.telefone ? '📞 ' + escapeHtml(c.telefone) : 'Sem telefone'}${c.aniversario ? ' · 🎂 ' + fmtDataBR(c.aniversario) : ''}</div>
+          ${c.observacoes ? `<div class="product-meta">${escapeHtml(c.observacoes)}</div>` : ''}
+        </div>
+      </div>
+      <div class="product-metrics">
+        <div class="metric">
+          <div class="m-label">Compras</div>
+          <div class="m-val num">${comprasCliente.length}</div>
+        </div>
+        <div class="metric">
+          <div class="m-label">Total gasto</div>
+          <div class="m-val num">${fmtBRL(totalGasto)}</div>
+        </div>
+      </div>
+      <div class="product-actions">
+        <button class="btn-edit" data-id="${c.id}" data-action="edit">Editar</button>
+        <button class="btn-delete" data-id="${c.id}" data-action="delete">Excluir</button>
+      </div>
+    `;
+    container.appendChild(el);
+  });
+
+  container.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      if (btn.dataset.action === 'edit') editarCliente(id);
+      else excluirCliente(id);
+    });
+  });
+}
+$('cliBusca').addEventListener('input', renderClientes);
+renderClientes();
+popularSelectClientes();
 </script>
 <script>
 // ===== PWA: cache offline do app-shell (só ativa se o ambiente suportar — não afeta o WebView do Kodular) =====
