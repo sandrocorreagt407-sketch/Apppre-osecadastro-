@@ -147,7 +147,7 @@
     transition:opacity .28s ease, visibility .28s ease;
   }
   .menu-overlay.open{opacity:1;visibility:visible;pointer-events:auto;}
-  .menu-backdrop{position:absolute;inset:0;background:rgba(2,6,15,.72);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+  .menu-backdrop{position:absolute;inset:0;background:#050810;}
   .menu-box{
     position:relative;width:100%;max-width:380px;
     background:linear-gradient(160deg, rgba(20,30,52,.92), rgba(10,16,30,.9));
@@ -161,8 +161,6 @@
     transition:opacity .28s ease, transform .32s cubic-bezier(.34,1.56,.64,1);
   }
   .menu-overlay.open .menu-box{opacity:1;transform:translateY(0) scale(1);}
-  .menu-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;padding:4px;line-height:0;}
-  .menu-close svg{width:18px;height:18px;stroke:#93a4c3;}
   .menu-box .login-avatar{margin:0 auto 14px;}
   .menu-box h2{font-size:19px;margin:0 0 2px;text-align:center;font-weight:700;color:#f3f6ff;}
   .menu-box p.sub{font-size:12.5px;color:#93a4c3;margin:0 0 16px;text-align:center;}
@@ -660,9 +658,6 @@
 <div id="menuOverlay" class="menu-overlay">
   <div class="menu-backdrop" id="menuBackdrop"></div>
   <div class="menu-box">
-    <button type="button" class="menu-close" id="btnFecharMenu" aria-label="Fechar menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
-    </button>
     <div class="login-avatar">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path></svg>
     </div>
@@ -1805,7 +1800,6 @@ function fecharMenu(){
   window.scrollTo(0, scrollAntesDoMenu);
 }
 $('btnAbrirMenu').addEventListener('click', abrirMenu);
-$('btnFecharMenu').addEventListener('click', fecharMenu);
 $('menuBackdrop').addEventListener('click', fecharMenu);
 
 function editarProduto(id){
