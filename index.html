@@ -519,6 +519,8 @@
   #toastContainer{
     padding-bottom:calc(20px + env(safe-area-inset-bottom));
   }
+  select{ font-size:13.5px !important; }
+  select option{ font-size:13.5px; padding:4px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -881,6 +883,18 @@
           <option value="">Sem cliente vinculado</option>
         </select>
       </div>
+      <div class="field">
+        <label for="vdStatusPagamento">Pagamento</label>
+        <select id="vdStatusPagamento" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;">
+          <option value="pago">✅ Pago</option>
+          <option value="nao_pago">❌ Não pago (fiado)</option>
+          <option value="parcial">🟡 Pago parcialmente</option>
+        </select>
+      </div>
+      <div class="field" id="campoValorPagoParcial" style="display:none;">
+        <label for="vdValorPagoParcial">Valor pago agora (R$)</label>
+        <input type="number" id="vdValorPagoParcial" step="0.01" min="0" placeholder="0,00">
+      </div>
     </div>
 
     <div class="card">
@@ -1000,6 +1014,19 @@
       <button class="btn-primary" id="btnExportarBackup">Exportar backup (.json)</button>
       <label for="inputImportarBackup" class="btn-secondary" style="display:block;text-align:center;cursor:pointer;">Importar backup (.json)</label>
       <input type="file" id="inputImportarBackup" accept="application/json,.json" style="display:none;">
+    </div>
+
+    <div class="card">
+      <p class="section-label">CONTAS A RECEBER</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Vendas não pagas ou pagas parcialmente (fiado).</p>
+      <div class="results" style="margin-bottom:12px;">
+        <div class="result-row"><span>Total pendente</span><span class="val num" id="totalPendenteReceber" style="color:var(--loss);">R$ 0,00</span></div>
+        <div class="result-row"><span>Vendas em aberto</span><span class="val num" id="qtdVendasAbertas">0</span></div>
+      </div>
+      <div id="listaContasReceber"></div>
+      <div class="empty-state" id="contasReceberEmptyState" style="display:none;">
+        Nenhuma venda pendente. Tudo pago! 🎉
+      </div>
     </div>
 
     <div class="card">
@@ -2329,10 +2356,23 @@ $('btnFinalizarVenda').addEventListener('click', () => {
     return `• ${item.quantidade}x ${item.produtoNome} — ${fmtBRL(item.subtotal)}`;
   }).join('\n');
 
+  const statusPagamento = $('vdStatusPagamento').value;
+  let valorPago;
+  if (statusPagamento === 'pago') valorPago = valorTotal;
+  else if (statusPagamento === 'nao_pago') valorPago = 0;
+  else valorPago = Math.min(valorTotal, Math.max(0, num($('vdValorPagoParcial').value)));
+  const valorPendente = Math.max(0, valorTotal - valorPago);
+  const statusFinal = valorPendente <= 0 ? 'pago' : (valorPago <= 0 ? 'nao_pago' : 'parcial');
+
+  const labelPagamento = statusFinal === 'pago' ? '✅ Pago integralmente'
+    : statusFinal === 'nao_pago' ? '❌ Não pago (fiado)'
+    : `🟡 Pago parcialmente — falta ${fmtBRL(valorPendente)}`;
+
   const confirmMsg = `Confirma finalizar esta venda?\n\n${linhasResumo}\n\n`
     + `Itens diferentes: ${carrinhoVenda.length}\n`
     + `Quantidade total: ${qtdTotal} un.\n`
-    + `Valor total: ${fmtBRL(valorTotal)}\n\n`
+    + `Valor total: ${fmtBRL(valorTotal)}\n`
+    + `Pagamento: ${labelPagamento}\n\n`
     + `Isso vai dar baixa no estoque de cada produto no Cadastro.`;
   if (!confirm(confirmMsg)) return;
 
@@ -2364,6 +2404,10 @@ $('btnFinalizarVenda').addEventListener('click', () => {
       lucroTotal: item.lucroSubtotal,
       valorVenda: item.subtotal,
       custoVenda: item.custoUnit * item.quantidade,
+      statusPagamento: statusFinal,
+      valorTotalPedido: valorTotal,
+      valorPagoPedido: valorPago,
+      valorPendentePedido: valorPendente,
       registradoPor: responsavel,
       criadoEm: agora
     });
@@ -2383,14 +2427,53 @@ $('btnFinalizarVenda').addEventListener('click', () => {
   const totalFinal = valorTotal;
   carrinhoVenda = [];
   $('vdCliente').value = '';
+  $('vdStatusPagamento').value = 'pago';
+  $('vdValorPagoParcial').value = '';
+  $('campoValorPagoParcial').style.display = 'none';
   renderCarrinho();
   popularSelectProdutos();
   renderVendas();
   renderCadastro();
   renderClientes();
-  registrarLog('Venda finalizada', `${totalItensPedido} item(ns), ${qtdTotal} un. — ${fmtBRL(totalFinal)}${clienteNome ? ' — cliente: ' + clienteNome : ''}`);
-  toast(`✅ Venda finalizada — ${qtdTotal} un. em ${fmtBRL(totalFinal)}.`, 'success');
+  registrarLog('Venda finalizada', `${totalItensPedido} item(ns), ${qtdTotal} un. — ${fmtBRL(totalFinal)}${clienteNome ? ' — cliente: ' + clienteNome : ''} — ${labelPagamento}`);
+  toast(`✅ Venda finalizada — ${qtdTotal} un. em ${fmtBRL(totalFinal)}. ${labelPagamento}`, 'success');
 });
+
+$('vdStatusPagamento').addEventListener('change', () => {
+  $('campoValorPagoParcial').style.display = $('vdStatusPagamento').value === 'parcial' ? 'block' : 'none';
+});
+
+function registrarPagamentoPedido(pedidoId){
+  const vendas = getVendas();
+  const itensPedido = vendas.filter(v => v.pedidoId === pedidoId);
+  if (itensPedido.length === 0) return;
+  const ref = itensPedido[0];
+  const pendenteAtual = ref.valorPendentePedido || 0;
+  if (pendenteAtual <= 0){
+    toast('Essa venda já está totalmente paga.', 'success');
+    return;
+  }
+  const valorStr = prompt(`Valor a receber agora (pendente: ${fmtBRL(pendenteAtual)}):`, pendenteAtual.toFixed(2));
+  if (valorStr === null) return;
+  const valorRecebido = Math.min(pendenteAtual, Math.max(0, num(valorStr)));
+  if (valorRecebido <= 0) return;
+
+  const novoValorPago = (ref.valorPagoPedido || 0) + valorRecebido;
+  const novoPendente = Math.max(0, (ref.valorTotalPedido || 0) - novoValorPago);
+  const novoStatus = novoPendente <= 0 ? 'pago' : 'parcial';
+
+  const vendasAtualizadas = vendas.map(v => {
+    if (v.pedidoId === pedidoId){
+      return { ...v, statusPagamento: novoStatus, valorPagoPedido: novoValorPago, valorPendentePedido: novoPendente };
+    }
+    return v;
+  });
+  saveVendas(vendasAtualizadas);
+  renderVendas();
+  if (typeof renderContasReceber === 'function') renderContasReceber();
+  registrarLog('Pagamento registrado', `Pedido ${pedidoId} — recebido ${fmtBRL(valorRecebido)}, ${novoPendente <= 0 ? 'quitado' : 'saldo ' + fmtBRL(novoPendente)}`);
+  toast(novoPendente <= 0 ? `✅ Venda quitada!` : `🟡 Recebido ${fmtBRL(valorRecebido)} — falta ${fmtBRL(novoPendente)}.`, 'success');
+}
 
 function excluirVenda(id){
   if (!exigirAdmin('Somente o Administrador pode excluir vendas.')) return;
@@ -2439,6 +2522,13 @@ function gerarComprovanteVenda(vendaId){
   });
   linhas.push('-'.repeat(32));
   linhas.push(`TOTAL: ${fmtBRL(totalGeral)}`);
+  const status = venda.statusPagamento || 'pago';
+  if (status === 'pago'){
+    linhas.push('PAGAMENTO: Pago integralmente');
+  } else {
+    linhas.push(`PAGO: ${fmtBRL(venda.valorPagoPedido || 0)}`);
+    linhas.push(`FALTA PAGAR: ${fmtBRL(venda.valorPendentePedido || 0)}`);
+  }
   linhas.push('');
   linhas.push('Obrigado pela compra! 💛');
   const texto = linhas.join('\n');
@@ -2473,11 +2563,16 @@ function renderVendas(){
     const dataFmt = new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR');
     const tagPedido = v.itensNoPedido > 1 ? ` · parte de uma venda com ${v.itensNoPedido} itens` : '';
     const tagCliente = v.clienteNome ? ` · 👤 ${escapeHtml(v.clienteNome)}` : '';
+    const status = v.statusPagamento || 'pago';
+    const badges = { pago: { texto: '✅ Pago', cor: 'var(--profit)' }, nao_pago: { texto: '❌ Não pago', cor: 'var(--loss)' }, parcial: { texto: '🟡 Parcial', cor: '#b98900' } };
+    const badge = badges[status];
+    const pendente = v.valorPendentePedido || 0;
     el.innerHTML = `
       <div class="product-top">
         <div>
-          <div class="product-name">${escapeHtml(v.produtoNome)}</div>
+          <div class="product-name">${escapeHtml(v.produtoNome)} <span style="font-size:11px;font-weight:700;color:${badge.cor};border:1px solid ${badge.cor};border-radius:999px;padding:1px 8px;">${badge.texto}</span></div>
           <div class="product-meta">${dataFmt} · ${v.quantidade} un. × ${fmtBRL(v.precoUsado)}${v.descontoAplicado ? ' · desconto ' + fmtPct(v.descontoAplicado) : ''}${tagPedido}${tagCliente}</div>
+          ${status !== 'pago' && pendente > 0 ? `<div class="product-meta" style="color:${badge.cor};font-weight:600;">Pendente: ${fmtBRL(pendente)}</div>` : ''}
         </div>
       </div>
       <div class="product-metrics">
@@ -2491,6 +2586,7 @@ function renderVendas(){
         </div>
       </div>
       <div class="product-actions">
+        ${status !== 'pago' && pendente > 0 ? `<button class="btn-primary" data-id="${v.pedidoId}" data-action="pagamento" style="flex:none;">💰 Registrar pagamento</button>` : ''}
         <button class="btn-secondary" data-id="${v.id}" data-action="comprovante" style="flex:none;">🧾 Comprovante</button>
         <button class="btn-delete" data-id="${v.id}" data-action="delete" style="flex:none;">Excluir</button>
       </div>
@@ -2503,6 +2599,9 @@ function renderVendas(){
   });
   container.querySelectorAll('button[data-action="comprovante"]').forEach(btn => {
     btn.addEventListener('click', () => gerarComprovanteVenda(btn.dataset.id));
+  });
+  container.querySelectorAll('button[data-action="pagamento"]').forEach(btn => {
+    btn.addEventListener('click', () => registrarPagamentoPedido(btn.dataset.id));
   });
 }
 $('vdBusca').addEventListener('input', renderVendas);
@@ -2545,11 +2644,49 @@ function atualizarAvisoBackup(){
   }
 }
 
+function renderContasReceber(){
+  const vendas = getVendas().filter(v => (v.statusPagamento || 'pago') !== 'pago' && (v.valorPendentePedido || 0) > 0);
+  // agrupa por pedidoId pra não somar/mostrar o mesmo pedido várias vezes (um pedido pode ter vários itens)
+  const porPedido = new Map();
+  vendas.forEach(v => {
+    if (!porPedido.has(v.pedidoId)) porPedido.set(v.pedidoId, v);
+  });
+  const pedidosAbertos = [...porPedido.values()].sort((a,b) => new Date(a.data) - new Date(b.data));
+  const totalPendente = pedidosAbertos.reduce((s, v) => s + (v.valorPendentePedido || 0), 0);
+
+  $('totalPendenteReceber').textContent = fmtBRL(totalPendente);
+  $('qtdVendasAbertas').textContent = pedidosAbertos.length;
+
+  const container = $('listaContasReceber');
+  container.innerHTML = '';
+  $('contasReceberEmptyState').style.display = pedidosAbertos.length === 0 ? 'block' : 'none';
+
+  pedidosAbertos.forEach(v => {
+    const dataFmt = new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR');
+    const status = v.statusPagamento || 'nao_pago';
+    const cor = status === 'nao_pago' ? 'var(--loss)' : '#b98900';
+    const el = document.createElement('div');
+    el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);';
+    el.innerHTML = `
+      <div style="min-width:0;">
+        <div style="font-weight:700;font-size:14px;">${v.clienteNome ? escapeHtml(v.clienteNome) : 'Sem cliente vinculado'}</div>
+        <div style="font-size:12px;color:var(--muted);">${dataFmt} · Total: ${fmtBRL(v.valorTotalPedido)} · Pago: ${fmtBRL(v.valorPagoPedido || 0)} · <span style="color:${cor};font-weight:600;">Falta: ${fmtBRL(v.valorPendentePedido)}</span></div>
+      </div>
+      <button class="btn-primary" data-id="${v.pedidoId}" style="flex:none;">💰 Receber</button>
+    `;
+    container.appendChild(el);
+  });
+  container.querySelectorAll('button[data-id]').forEach(btn => {
+    btn.addEventListener('click', () => registrarPagamentoPedido(btn.dataset.id));
+  });
+}
+
 function renderRelatorios(){
   const periodo = $('relPeriodo').value;
   const vendas = vendasNoPeriodo(periodo);
   renderHistorico();
   atualizarAvisoBackup();
+  renderContasReceber();
 
   let totalVendido = 0, totalCusto = 0, totalLucro = 0, totalUnid = 0;
   vendas.forEach(v => {
