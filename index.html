@@ -57,7 +57,8 @@
     background:#141f2b;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0;max-width:100vw;overflow-x:hidden;}
+  main, .card, .view{max-width:100%;overflow-x:hidden;}
   body{
     background:var(--paper);
     color:var(--ink);
@@ -326,10 +327,12 @@
     border-radius:6px;
     padding:12px 14px;
     margin-bottom:10px;
+    max-width:100%;
+    overflow-x:hidden;
   }
-  .product-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-  .product-name{font-size:14.5px;font-weight:600;flex:1;}
-  .product-meta{font-size:12px;color:var(--muted);margin-top:2px;}
+  .product-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;min-width:0;}
+  .product-name{font-size:14.5px;font-weight:600;flex:1;min-width:0;overflow-wrap:break-word;word-break:break-word;}
+  .product-meta{font-size:12px;color:var(--muted);margin-top:2px;overflow-wrap:break-word;word-break:break-word;}
   .product-metrics{display:flex;gap:14px;margin-top:8px;}
   .metric{font-size:13px;}
   .metric .m-label{color:var(--muted);font-size:11px;}
