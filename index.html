@@ -994,9 +994,12 @@
     <div class="card">
       <p class="section-label">HISTÓRICO DE ALTERAÇÕES</p>
       <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Últimas ações realizadas no sistema, com o usuário responsável.</p>
-      <div id="listaHistorico"></div>
-      <div class="empty-state" id="histEmptyState" style="display:none;">
-        Nenhuma alteração registrada ainda.
+      <button class="btn-secondary" id="btnToggleHistorico" style="margin-top:0;">Mostrar histórico</button>
+      <div id="blocoHistorico" style="display:none;margin-top:12px;">
+        <div id="listaHistorico"></div>
+        <div class="empty-state" id="histEmptyState" style="display:none;">
+          Nenhuma alteração registrada ainda.
+        </div>
       </div>
     </div>
 
@@ -1485,6 +1488,12 @@ function renderHistorico(){
     container.appendChild(el);
   });
 }
+$('btnToggleHistorico').addEventListener('click', () => {
+  const bloco = $('blocoHistorico');
+  const visivel = bloco.style.display !== 'none';
+  bloco.style.display = visivel ? 'none' : 'block';
+  $('btnToggleHistorico').textContent = visivel ? 'Mostrar histórico' : 'Ocultar histórico';
+});
 
 function mostrarApp(){
   $('loginOverlay').style.display = 'none';
@@ -2599,8 +2608,8 @@ function renderVendas(){
         </div>
       </div>
       <div class="product-actions">
-        ${status !== 'pago' && pendente > 0 ? `<button class="btn-primary" data-id="${v.pedidoId}" data-action="pagamento" style="flex:none;">💰 Registrar pagamento</button>` : ''}
-        <button class="btn-secondary" data-id="${v.id}" data-action="comprovante" style="flex:none;">🧾 Comprovante</button>
+        ${status !== 'pago' && pendente > 0 ? `<button class="btn-primary" data-id="${v.pedidoId}" data-action="pagamento" style="flex:none;width:auto;">💰 Registrar pagamento</button>` : ''}
+        <button class="btn-secondary" data-id="${v.id}" data-action="comprovante" style="flex:none;width:auto;margin-top:0;">🧾 Comprovante</button>
         <button class="btn-delete" data-id="${v.id}" data-action="delete" style="flex:none;">Excluir</button>
       </div>
     `;
@@ -2679,13 +2688,14 @@ function renderContasReceber(){
     const status = v.statusPagamento || 'nao_pago';
     const cor = status === 'nao_pago' ? 'var(--loss)' : '#b98900';
     const el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);';
+    el.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--line);';
     el.innerHTML = `
-      <div style="min-width:0;">
+      <div style="min-width:0;margin-bottom:8px;">
         <div style="font-weight:700;font-size:14px;">${v.clienteNome ? escapeHtml(v.clienteNome) : 'Sem cliente vinculado'}</div>
-        <div style="font-size:12px;color:var(--muted);">${dataFmt} · Total: ${fmtBRL(v.valorTotalPedido)} · Pago: ${fmtBRL(v.valorPagoPedido || 0)} · <span style="color:${cor};font-weight:600;">Falta: ${fmtBRL(v.valorPendentePedido)}</span></div>
+        <div style="font-size:12px;color:var(--muted);">${dataFmt} · Total: ${fmtBRL(v.valorTotalPedido)} · Pago: ${fmtBRL(v.valorPagoPedido || 0)}</div>
+        <div style="font-size:12.5px;color:${cor};font-weight:700;">Falta: ${fmtBRL(v.valorPendentePedido)}</div>
       </div>
-      <button class="btn-primary" data-id="${v.pedidoId}" style="flex:none;">💰 Receber</button>
+      <button class="btn-primary" data-id="${v.pedidoId}">💰 Receber</button>
     `;
     container.appendChild(el);
   });
