@@ -1504,6 +1504,9 @@ function mostrarApp(){
   $('menuTriggerNome').textContent = primeiroNome || 'Menu';
   $('menuSaudacao').textContent = s ? `Olá, ${primeiroNome}` : 'Olá!';
   $('menuPapel').textContent = s && s.papel ? s.papel : 'Usuário';
+  // Abre o menu de módulos direto ao entrar, em vez de já cair dentro do Cadastro —
+  // assim a pessoa escolhe onde quer ir antes de qualquer coisa.
+  setTimeout(abrirMenu, 50);
 }
 function mostrarLogin(modo){
   $('appContent').style.display = 'none';
