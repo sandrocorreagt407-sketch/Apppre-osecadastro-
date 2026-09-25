@@ -1148,6 +1148,7 @@
       <div class="results" id="eqPorCategoria"></div>
     </div>
 
+    <div id="eqAlertaEstoque" style="display:none;background:#fff3cd;border:1px solid #e6c34a;color:#6b5205;border-radius:6px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.5;"></div>
     <input type="text" id="eqBusca" placeholder="Buscar produto de uso..." style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;margin-bottom:12px;">
     <div id="listaEquip"></div>
     <div class="empty-state" id="eqEmptyState" style="display:none;">
@@ -2140,18 +2141,41 @@ function renderEquip(){
     catContainer.appendChild(row);
   });
 
+  const EQUIP_ESTOQUE_BAIXO_LIMITE = 3;
+  const zerados = listaCompleta.filter(i => (i.qtd || 0) <= 0);
+  const baixos = listaCompleta.filter(i => (i.qtd || 0) > 0 && (i.qtd || 0) <= EQUIP_ESTOQUE_BAIXO_LIMITE);
+  const alertaBox = $('eqAlertaEstoque');
+  if (alertaBox){
+    if (zerados.length || baixos.length){
+      const partes = [];
+      if (zerados.length) partes.push(`<strong>${zerados.length}</strong> item(ns) zerado(s), precisa comprar: ${zerados.map(i => escapeHtml(i.nome)).join(', ')}.`);
+      if (baixos.length) partes.push(`<strong>${baixos.length}</strong> item(ns) com estoque baixo (≤ ${EQUIP_ESTOQUE_BAIXO_LIMITE} un.): ${baixos.map(i => escapeHtml(i.nome)).join(', ')}.`);
+      alertaBox.innerHTML = '⚠️ ' + partes.join('<br>');
+      alertaBox.style.display = 'block';
+    } else {
+      alertaBox.style.display = 'none';
+    }
+  }
+
   list.forEach(i => {
     const el = document.createElement('div');
     el.className = 'product-card';
+    const qtd = i.qtd || 0;
+    let statusEstoque, corStatus;
+    if (qtd <= 0){ statusEstoque = 'Estoque zerado — comprar'; corStatus = 'var(--loss)'; }
+    else if (qtd <= EQUIP_ESTOQUE_BAIXO_LIMITE){ statusEstoque = 'Estoque baixo'; corStatus = '#b98900'; }
+    else { statusEstoque = 'Em estoque'; corStatus = 'var(--profit)'; }
     el.innerHTML = `
       <div class="product-top">
         <div>
           <div class="product-name">${escapeHtml(i.nome)}</div>
           <div class="product-meta">${escapeHtml(i.categoria)} · ${i.qtd}x ${fmtBRL(i.valor)}</div>
+          <div class="product-meta" style="color:${corStatus};font-weight:600;">${statusEstoque}</div>
         </div>
         <div class="m-val num" style="font-size:15px;">${fmtBRL(i.subtotal)}</div>
       </div>
       <div class="product-actions">
+        <button class="btn-secondary" data-id="${i.id}" data-action="baixa" style="margin-top:0;">📤 Dar baixa</button>
         <button class="btn-edit" data-id="${i.id}" data-action="edit">Editar</button>
         <button class="btn-delete" data-id="${i.id}" data-action="delete">Excluir</button>
       </div>
@@ -2163,9 +2187,43 @@ function renderEquip(){
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
       if (btn.dataset.action === 'edit') editarEquip(id);
+      else if (btn.dataset.action === 'baixa') darBaixaEquip(id);
       else excluirEquip(id);
     });
   });
+}
+
+function darBaixaEquip(id){
+  const item = getEquip().find(i => i.id === id);
+  if (!item) return;
+  const disponivel = item.qtd || 0;
+  if (disponivel <= 0){
+    toast(`⚠️ "${item.nome}" já está com estoque zerado. Compre mais antes de dar baixa.`, 'danger');
+    return;
+  }
+  const valorStr = prompt(`Quantas unidades de "${item.nome}" foram usadas agora?\n(Estoque disponível: ${disponivel})`, '1');
+  if (valorStr === null) return;
+  const qtdUsada = Math.floor(num(valorStr));
+  if (!qtdUsada || qtdUsada <= 0){
+    toast('Informe uma quantidade válida.', 'danger');
+    return;
+  }
+  if (qtdUsada > disponivel){
+    toast(`Só há ${disponivel} unidade(s) em estoque. Não é possível dar baixa de ${qtdUsada}.`, 'danger');
+    return;
+  }
+  const novaQtd = disponivel - qtdUsada;
+  const list = getEquip().map(i => {
+    if (i.id === id){
+      return { ...i, qtd: novaQtd, subtotal: i.valor * novaQtd, atualizadoPor: usuarioAtual(), atualizadoEm: new Date().toISOString() };
+    }
+    return i;
+  });
+  saveEquip(list);
+  renderEquip();
+  registrarLog('Baixa de uso', `"${item.nome}" — ${qtdUsada} un. usada(s), restam ${novaQtd}`);
+  const avisoBaixo = novaQtd <= 3 ? (novaQtd <= 0 ? ' ⚠️ Estoque zerado — precisa comprar!' : ' ⚠️ Estoque baixo, considere comprar mais.') : '';
+  toast(`📤 Baixa registrada: ${qtdUsada} un. de "${item.nome}". Restam ${novaQtd}.${avisoBaixo}`, novaQtd <= 3 ? 'danger' : 'success');
 }
 
 // init
