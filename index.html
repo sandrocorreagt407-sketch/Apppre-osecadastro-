@@ -944,7 +944,16 @@
     <div class="card">
       <p class="section-label">VENDAS REGISTRADAS</p>
       <input type="text" id="vdBusca" placeholder="Buscar venda por produto..." style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:5px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit;margin-bottom:12px;">
-      <div id="listaVendas"></div>
+
+      <button class="btn-secondary" id="btnToggleVdNaoPago" style="margin-top:0;border-color:var(--loss);color:var(--loss);">❌ Não pago (0)</button>
+      <div id="blocoVdNaoPago" style="display:none;margin:10px 0 4px;"></div>
+
+      <button class="btn-secondary" id="btnToggleVdParcial" style="border-color:#b98900;color:#b98900;">🟡 Pago parcialmente (0)</button>
+      <div id="blocoVdParcial" style="display:none;margin:10px 0 4px;"></div>
+
+      <button class="btn-secondary" id="btnToggleVdPago" style="border-color:var(--profit);color:var(--profit);">✅ Pago (0)</button>
+      <div id="blocoVdPago" style="display:none;margin:10px 0 4px;"></div>
+
       <div class="empty-state" id="vdEmptyState" style="display:none;">
         Nenhuma venda registrada ainda.
       </div>
@@ -2631,63 +2640,88 @@ function gerarComprovanteVenda(vendaId){
   toast('🧾 Comprovante gerado.', 'success');
 }
 
+let vdGruposAbertos = { nao_pago: false, parcial: false, pago: false };
+
+function construirCardVenda(v){
+  const el = document.createElement('div');
+  el.className = 'product-card';
+  const dataFmt = new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR');
+  const tagPedido = v.itensNoPedido > 1 ? ` · parte de uma venda com ${v.itensNoPedido} itens` : '';
+  const tagCliente = v.clienteNome ? ` · 👤 ${escapeHtml(v.clienteNome)}` : '';
+  const status = v.statusPagamento || 'pago';
+  const badges = { pago: { texto: '✅ Pago', cor: 'var(--profit)' }, nao_pago: { texto: '❌ Não pago', cor: 'var(--loss)' }, parcial: { texto: '🟡 Parcial', cor: '#b98900' } };
+  const badge = badges[status];
+  const pendente = v.valorPendentePedido || 0;
+  el.innerHTML = `
+    <div class="product-top">
+      <div>
+        <div class="product-name">${escapeHtml(v.produtoNome)} <span style="font-size:11px;font-weight:700;color:${badge.cor};border:1px solid ${badge.cor};border-radius:999px;padding:1px 8px;">${badge.texto}</span></div>
+        <div class="product-meta">${dataFmt} · ${v.quantidade} un. × ${fmtBRL(v.precoUsado)}${v.descontoAplicado ? ' · desconto ' + fmtPct(v.descontoAplicado) : ''}${tagPedido}${tagCliente}</div>
+        ${status !== 'pago' && pendente > 0 ? `<div class="product-meta" style="color:${badge.cor};font-weight:600;">Pendente: ${fmtBRL(pendente)}</div>` : ''}
+      </div>
+    </div>
+    <div class="product-metrics">
+      <div class="metric">
+        <div class="m-label">Valor da venda</div>
+        <div class="m-val num">${fmtBRL(v.valorVenda)}</div>
+      </div>
+      <div class="metric">
+        <div class="m-label">Lucro</div>
+        <div class="m-val num" style="color:${v.lucroTotal>=0?'var(--profit)':'var(--loss)'}">${fmtBRL(v.lucroTotal)}</div>
+      </div>
+    </div>
+    <div class="product-actions">
+      ${status !== 'pago' && pendente > 0 ? `<button class="btn-primary" data-id="${v.pedidoId}" data-action="pagamento" style="flex:none;width:auto;">💰 Registrar pagamento</button>` : ''}
+      <button class="btn-secondary" data-id="${v.id}" data-action="comprovante" style="flex:none;width:auto;margin-top:0;">🧾 Comprovante</button>
+      <button class="btn-delete" data-id="${v.id}" data-action="delete" style="flex:none;">Excluir</button>
+    </div>
+  `;
+  return el;
+}
+
+function preencherGrupoVendas(containerId, botaoId, rotulo, lista){
+  const bloco = $(containerId);
+  bloco.innerHTML = '';
+  lista.forEach(v => bloco.appendChild(construirCardVenda(v)));
+  $(botaoId).textContent = `${rotulo} (${lista.length})`;
+  bloco.style.display = vdGruposAbertos[containerId] ? 'block' : 'none';
+
+  bloco.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+    btn.addEventListener('click', () => excluirVenda(btn.dataset.id));
+  });
+  bloco.querySelectorAll('button[data-action="comprovante"]').forEach(btn => {
+    btn.addEventListener('click', () => gerarComprovanteVenda(btn.dataset.id));
+  });
+  bloco.querySelectorAll('button[data-action="pagamento"]').forEach(btn => {
+    btn.addEventListener('click', () => registrarPagamentoPedido(btn.dataset.id));
+  });
+}
+
 function renderVendas(){
   const busca = ($('vdBusca').value || '').trim().toLowerCase();
   const vendas = getVendas()
     .filter(v => !busca || (v.produtoNome || '').toLowerCase().includes(busca))
     .sort((a,b) => new Date(b.data) - new Date(a.data) || new Date(b.criadoEm) - new Date(a.criadoEm));
-  const container = $('listaVendas');
-  container.innerHTML = '';
+
   $('vdEmptyState').style.display = vendas.length === 0 ? 'block' : 'none';
 
-  vendas.forEach(v => {
-    const el = document.createElement('div');
-    el.className = 'product-card';
-    const dataFmt = new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR');
-    const tagPedido = v.itensNoPedido > 1 ? ` · parte de uma venda com ${v.itensNoPedido} itens` : '';
-    const tagCliente = v.clienteNome ? ` · 👤 ${escapeHtml(v.clienteNome)}` : '';
-    const status = v.statusPagamento || 'pago';
-    const badges = { pago: { texto: '✅ Pago', cor: 'var(--profit)' }, nao_pago: { texto: '❌ Não pago', cor: 'var(--loss)' }, parcial: { texto: '🟡 Parcial', cor: '#b98900' } };
-    const badge = badges[status];
-    const pendente = v.valorPendentePedido || 0;
-    el.innerHTML = `
-      <div class="product-top">
-        <div>
-          <div class="product-name">${escapeHtml(v.produtoNome)} <span style="font-size:11px;font-weight:700;color:${badge.cor};border:1px solid ${badge.cor};border-radius:999px;padding:1px 8px;">${badge.texto}</span></div>
-          <div class="product-meta">${dataFmt} · ${v.quantidade} un. × ${fmtBRL(v.precoUsado)}${v.descontoAplicado ? ' · desconto ' + fmtPct(v.descontoAplicado) : ''}${tagPedido}${tagCliente}</div>
-          ${status !== 'pago' && pendente > 0 ? `<div class="product-meta" style="color:${badge.cor};font-weight:600;">Pendente: ${fmtBRL(pendente)}</div>` : ''}
-        </div>
-      </div>
-      <div class="product-metrics">
-        <div class="metric">
-          <div class="m-label">Valor da venda</div>
-          <div class="m-val num">${fmtBRL(v.valorVenda)}</div>
-        </div>
-        <div class="metric">
-          <div class="m-label">Lucro</div>
-          <div class="m-val num" style="color:${v.lucroTotal>=0?'var(--profit)':'var(--loss)'}">${fmtBRL(v.lucroTotal)}</div>
-        </div>
-      </div>
-      <div class="product-actions">
-        ${status !== 'pago' && pendente > 0 ? `<button class="btn-primary" data-id="${v.pedidoId}" data-action="pagamento" style="flex:none;width:auto;">💰 Registrar pagamento</button>` : ''}
-        <button class="btn-secondary" data-id="${v.id}" data-action="comprovante" style="flex:none;width:auto;margin-top:0;">🧾 Comprovante</button>
-        <button class="btn-delete" data-id="${v.id}" data-action="delete" style="flex:none;">Excluir</button>
-      </div>
-    `;
-    container.appendChild(el);
-  });
+  const naoPagas = vendas.filter(v => (v.statusPagamento || 'pago') === 'nao_pago');
+  const parciais = vendas.filter(v => (v.statusPagamento || 'pago') === 'parcial');
+  const pagas = vendas.filter(v => (v.statusPagamento || 'pago') === 'pago');
 
-  container.querySelectorAll('button[data-action="delete"]').forEach(btn => {
-    btn.addEventListener('click', () => excluirVenda(btn.dataset.id));
-  });
-  container.querySelectorAll('button[data-action="comprovante"]').forEach(btn => {
-    btn.addEventListener('click', () => gerarComprovanteVenda(btn.dataset.id));
-  });
-  container.querySelectorAll('button[data-action="pagamento"]').forEach(btn => {
-    btn.addEventListener('click', () => registrarPagamentoPedido(btn.dataset.id));
-  });
+  preencherGrupoVendas('blocoVdNaoPago', 'btnToggleVdNaoPago', '❌ Não pago', naoPagas);
+  preencherGrupoVendas('blocoVdParcial', 'btnToggleVdParcial', '🟡 Pago parcialmente', parciais);
+  preencherGrupoVendas('blocoVdPago', 'btnToggleVdPago', '✅ Pago', pagas);
 }
 $('vdBusca').addEventListener('input', renderVendas);
+
+['blocoVdNaoPago','blocoVdParcial','blocoVdPago'].forEach(id => {
+  const btnId = 'btnToggle' + id.slice(5);
+  $(btnId).addEventListener('click', () => {
+    vdGruposAbertos[id] = !vdGruposAbertos[id];
+    $(id).style.display = vdGruposAbertos[id] ? 'block' : 'none';
+  });
+});
 
 // ===== MÓDULO: RELATÓRIOS (lucro/perda, meta, estoque) =====
 function vendasNoPeriodo(periodo){
