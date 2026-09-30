@@ -2128,6 +2128,34 @@ function excluirEquip(id){
   toast(`🗑️ Produto de uso "${item ? item.nome : ''}" excluído.`, 'danger');
 }
 
+let eqGruposAbertos = {};
+
+function construirCardEquip(i, limite){
+  const el = document.createElement('div');
+  el.className = 'product-card';
+  const qtd = i.qtd || 0;
+  let statusEstoque, corStatus;
+  if (qtd <= 0){ statusEstoque = 'Estoque zerado — comprar'; corStatus = 'var(--loss)'; }
+  else if (qtd <= limite){ statusEstoque = 'Estoque baixo'; corStatus = '#b98900'; }
+  else { statusEstoque = 'Em estoque'; corStatus = 'var(--profit)'; }
+  el.innerHTML = `
+    <div class="product-top">
+      <div>
+        <div class="product-name">${escapeHtml(i.nome)}</div>
+        <div class="product-meta">${escapeHtml(i.categoria)} · ${i.qtd}x ${fmtBRL(i.valor)}</div>
+        <div class="product-meta" style="color:${corStatus};font-weight:600;">${statusEstoque}</div>
+      </div>
+      <div class="m-val num" style="font-size:15px;">${fmtBRL(i.subtotal)}</div>
+    </div>
+    <div class="product-actions">
+      <button class="btn-secondary" data-id="${i.id}" data-action="baixa" style="margin-top:0;">📤 Dar baixa</button>
+      <button class="btn-edit" data-id="${i.id}" data-action="edit">Editar</button>
+      <button class="btn-delete" data-id="${i.id}" data-action="delete">Excluir</button>
+    </div>
+  `;
+  return el;
+}
+
 function renderEquip(){
   const listaCompleta = getEquip().sort((a,b) => new Date(b.atualizadoEm) - new Date(a.atualizadoEm));
   const busca = ($('eqBusca').value || '').trim().toLowerCase();
@@ -2169,39 +2197,41 @@ function renderEquip(){
     }
   }
 
+  // Agrupa por categoria — cada categoria vira um submódulo recolhível, igual às Vendas
+  const grupos = {};
   list.forEach(i => {
-    const el = document.createElement('div');
-    el.className = 'product-card';
-    const qtd = i.qtd || 0;
-    let statusEstoque, corStatus;
-    if (qtd <= 0){ statusEstoque = 'Estoque zerado — comprar'; corStatus = 'var(--loss)'; }
-    else if (qtd <= EQUIP_ESTOQUE_BAIXO_LIMITE){ statusEstoque = 'Estoque baixo'; corStatus = '#b98900'; }
-    else { statusEstoque = 'Em estoque'; corStatus = 'var(--profit)'; }
-    el.innerHTML = `
-      <div class="product-top">
-        <div>
-          <div class="product-name">${escapeHtml(i.nome)}</div>
-          <div class="product-meta">${escapeHtml(i.categoria)} · ${i.qtd}x ${fmtBRL(i.valor)}</div>
-          <div class="product-meta" style="color:${corStatus};font-weight:600;">${statusEstoque}</div>
-        </div>
-        <div class="m-val num" style="font-size:15px;">${fmtBRL(i.subtotal)}</div>
-      </div>
-      <div class="product-actions">
-        <button class="btn-secondary" data-id="${i.id}" data-action="baixa" style="margin-top:0;">📤 Dar baixa</button>
-        <button class="btn-edit" data-id="${i.id}" data-action="edit">Editar</button>
-        <button class="btn-delete" data-id="${i.id}" data-action="delete">Excluir</button>
-      </div>
-    `;
-    container.appendChild(el);
+    const cat = i.categoria && i.categoria.trim() ? i.categoria.trim() : 'Sem categoria';
+    (grupos[cat] = grupos[cat] || []).push(i);
   });
+  const categorias = Object.keys(grupos).sort((a,b) => a.localeCompare(b));
 
-  container.querySelectorAll('button[data-action]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      if (btn.dataset.action === 'edit') editarEquip(id);
-      else if (btn.dataset.action === 'baixa') darBaixaEquip(id);
-      else excluirEquip(id);
-    });
+  categorias.forEach(cat => {
+    const itensCat = grupos[cat];
+    const subtotalCat = itensCat.reduce((s,i) => s + i.subtotal, 0);
+    if (eqGruposAbertos[cat] === undefined) eqGruposAbertos[cat] = false;
+    const aberto = eqGruposAbertos[cat];
+
+    const btn = document.createElement('button');
+    btn.className = 'btn-secondary';
+    btn.style.cssText = 'margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;';
+    btn.innerHTML = `<span>${aberto ? '▾' : '▸'} ${escapeHtml(cat)} (${itensCat.length})</span><span class="num">${fmtBRL(subtotalCat)}</span>`;
+    btn.addEventListener('click', () => { eqGruposAbertos[cat] = !eqGruposAbertos[cat]; renderEquip(); });
+    container.appendChild(btn);
+
+    if (aberto){
+      const bloco = document.createElement('div');
+      bloco.style.marginTop = '8px';
+      itensCat.forEach(i => bloco.appendChild(construirCardEquip(i, EQUIP_ESTOQUE_BAIXO_LIMITE)));
+      container.appendChild(bloco);
+      bloco.querySelectorAll('button[data-action]').forEach(btnAcao => {
+        btnAcao.addEventListener('click', () => {
+          const id = btnAcao.dataset.id;
+          if (btnAcao.dataset.action === 'edit') editarEquip(id);
+          else if (btnAcao.dataset.action === 'baixa') darBaixaEquip(id);
+          else excluirEquip(id);
+        });
+      });
+    }
   });
 }
 
