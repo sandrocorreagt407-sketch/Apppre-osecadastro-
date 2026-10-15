@@ -742,6 +742,11 @@
         <span>Simulador</span>
         <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </button>
+      <button type="button" class="menu-item" data-view="usuarios" id="menuItemUsuarios" style="display:none;">
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Usuários</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
     </nav>
 
     <button type="button" class="menu-item menu-sair" id="btnSairMenu">
@@ -1286,6 +1291,15 @@
     </div>
   </div>
 
+  <!-- USUÁRIOS VIEW (só Administrador) -->
+  <div class="view" id="view-usuarios">
+    <div class="card">
+      <p class="section-label">PERMISSÕES POR USUÁRIO</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 4px;">Escolha quais módulos cada pessoa pode ver no menu. O Administrador sempre tem acesso a tudo.</p>
+    </div>
+    <div id="listaUsuariosPermissoes"></div>
+  </div>
+
 </main>
 
 <div id="printArea"></div>
@@ -1510,6 +1524,83 @@ function exigirAdmin(mensagem){
   return false;
 }
 
+// Verifica se o usuário logado pode acessar um módulo (vendas, equip, clientes).
+// Administrador sempre tem acesso total. Usuários sem o campo "permissoes" definido
+// (cadastrados antes dessa função existir) também têm acesso total, pra não quebrar nada —
+// a restrição só passa a valer quando o Administrador desmarcar algo pra esse usuário.
+function temPermissaoModulo(modulo){
+  const s = getSessao();
+  if (!s) return false;
+  const u = getUsuarios().find(x => x.id === s.id);
+  const papel = (u && u.papel) || s.papel;
+  if (papel === 'Administrador') return true;
+  const permissoes = u ? u.permissoes : s.permissoes;
+  if (!permissoes) return true;
+  return permissoes[modulo] !== false;
+}
+
+const MODULOS_PERMISSAO = [
+  { chave: 'vendas', label: 'Vendas' },
+  { chave: 'equip', label: 'Uso' },
+  { chave: 'clientes', label: 'Clientes' },
+];
+
+function renderUsuariosPermissoes(){
+  const container = $('listaUsuariosPermissoes');
+  if (!container) return;
+  const usuarios = getUsuarios().sort((a,b) => a.nome.localeCompare(b.nome));
+  container.innerHTML = '';
+
+  usuarios.forEach(u => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    const ehAdmin = u.papel === 'Administrador';
+    const permissoes = u.permissoes || { vendas: true, equip: true, clientes: true };
+    el.innerHTML = `
+      <p class="section-label">${escapeHtml(u.nome)} <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">— ${escapeHtml(u.papel || 'Usuário')}</span></p>
+      ${ehAdmin
+        ? `<p style="font-size:12.5px;color:var(--muted);margin:0;">Administrador tem acesso a todos os módulos.</p>`
+        : MODULOS_PERMISSAO.map(m => `
+          <label style="display:flex;align-items:center;gap:9px;padding:7px 0;cursor:pointer;">
+            <input type="checkbox" data-usuario="${u.id}" data-modulo="${m.chave}" ${permissoes[m.chave] !== false ? 'checked' : ''} style="width:18px;height:18px;flex-shrink:0;">
+            <span>${m.label}</span>
+          </label>
+        `).join('')}
+    `;
+    container.appendChild(el);
+  });
+
+  container.querySelectorAll('input[type="checkbox"][data-usuario]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const usuarioId = chk.dataset.usuario;
+      const modulo = chk.dataset.modulo;
+      const lista = getUsuarios().map(u => {
+        if (u.id === usuarioId){
+          const permissoes = { ...(u.permissoes || { vendas: true, equip: true, clientes: true }) };
+          permissoes[modulo] = chk.checked;
+          return { ...u, permissoes };
+        }
+        return u;
+      });
+      saveUsuarios(lista);
+      const alvo = lista.find(u => u.id === usuarioId);
+      registrarLog('Permissão alterada', `${alvo.nome} — ${modulo} ${chk.checked ? 'liberado' : 'bloqueado'}`);
+      toast(`✅ Permissão de "${alvo.nome}" atualizada.`, 'success');
+      atualizarVisibilidadeMenu();
+    });
+  });
+}
+
+function atualizarVisibilidadeMenu(){
+  const mapa = { vendas: 'vendas', equip: 'equip', clientes: 'clientes' };
+  Object.keys(mapa).forEach(modulo => {
+    const item = document.querySelector(`.menu-item[data-view="${mapa[modulo]}"]`);
+    if (item) item.style.display = temPermissaoModulo(modulo) ? 'flex' : 'none';
+  });
+  const itemUsuarios = $('menuItemUsuarios');
+  if (itemUsuarios) itemUsuarios.style.display = souAdministrador() ? 'flex' : 'none';
+}
+
 function getLog(){
   try{ return JSON.parse(localStorage.getItem(LOG_KEY)) || []; }
   catch(e){ return []; }
@@ -1645,7 +1736,7 @@ $('formLogin').addEventListener('submit', async (e) => {
   const hash = await hashSenha(senha, u.usuario);
   if (hash !== u.senhaHash){ erroEl.textContent = 'Usuário ou senha incorretos.'; return; }
 
-  setSessao({ id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel || 'Usuário' }, $('loginLembrar').checked);
+  setSessao({ id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel || 'Usuário', permissoes: u.permissoes }, $('loginLembrar').checked);
   localStorage.setItem(LAST_USER_KEY, u.usuario);
   $('loginSenha').value = '';
   mostrarApp();
@@ -1675,11 +1766,12 @@ $('formCadastroUsuario').addEventListener('submit', async (e) => {
     usuario,
     senhaHash: await hashSenha(senha, usuario),
     papel: usuarios.length === 0 ? 'Administrador' : 'Usuário',
+    permissoes: { vendas: true, equip: true, clientes: true },
     criadoEm: new Date().toISOString()
   };
   usuarios.push(novo);
   saveUsuarios(usuarios);
-  setSessao({ id: novo.id, usuario: novo.usuario, nome: novo.nome, papel: novo.papel }, true);
+  setSessao({ id: novo.id, usuario: novo.usuario, nome: novo.nome, papel: novo.papel, permissoes: novo.permissoes }, true);
   localStorage.setItem(LAST_USER_KEY, novo.usuario);
 
   $('novoNome').value = '';
@@ -1909,6 +2001,14 @@ const MODULOS_INFO = {
 };
 
 function switchView(name){
+  if (['vendas','equip','clientes'].includes(name) && !temPermissaoModulo(name)){
+    toast('🔒 Você não tem acesso a esse módulo. Fale com o Administrador.', 'danger');
+    name = 'cadastro';
+  }
+  if (name === 'usuarios' && !souAdministrador()){
+    toast('🔒 Essa tela é restrita ao Administrador.', 'danger');
+    name = 'cadastro';
+  }
   document.querySelectorAll('.menu-item[data-view]').forEach(t => t.classList.toggle('active', t.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   $('view-' + name).classList.add('active');
@@ -1920,6 +2020,7 @@ function switchView(name){
   if (name === 'vendas'){ popularSelectProdutos(); popularSelectClientes(); renderVendas(); renderCarrinho(); }
   if (name === 'relatorios'){ renderRelatorios(); }
   if (name === 'clientes'){ renderClientes(); }
+  if (name === 'usuarios'){ renderUsuariosPermissoes(); }
 }
 document.querySelectorAll('.menu-item[data-view]').forEach(t => t.addEventListener('click', () => {
   switchView(t.dataset.view);
@@ -1932,6 +2033,7 @@ function abrirMenu(){
   document.body.classList.add('menu-open');
   document.body.style.top = `-${scrollAntesDoMenu}px`;
   $('menuOverlay').classList.add('open');
+  atualizarVisibilidadeMenu();
 }
 function fecharMenu(){
   $('menuOverlay').classList.remove('open');
