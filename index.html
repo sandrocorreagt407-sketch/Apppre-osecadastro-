@@ -1152,10 +1152,22 @@
           <div class="value num" id="estQtdTotal">0</div>
         </div>
       </div>
-      <table class="small-table" id="estTabela">
-        <thead><tr><th>Produto</th><th class="num">Estoque</th><th class="num">Valor</th></tr></thead>
-        <tbody id="estTabelaBody"></tbody>
-      </table>
+      <div class="hero-results">
+        <div class="hero-box positive">
+          <div class="label">Valor potencial de venda</div>
+          <div class="value num" id="estValorVendaTotal">R$ 0,00</div>
+        </div>
+        <div class="hero-box positive">
+          <div class="label">Lucro potencial</div>
+          <div class="value num" id="estLucroPotencial">R$ 0,00</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="small-table" id="estTabela">
+          <thead><tr><th>Produto</th><th class="num">Estoque</th><th class="num">Custo un.</th><th class="num">Venda un.</th><th class="num">Custo total</th><th class="num">Venda total</th></tr></thead>
+          <tbody id="estTabelaBody"></tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -3106,7 +3118,7 @@ $('btnSalvarMeta').addEventListener('click', () => {
 
 function renderEstoqueRelatorio(){
   const produtos = getCadastro();
-  let valorTotal = 0, qtdTotal = 0;
+  let valorTotal = 0, qtdTotal = 0, valorVendaTotal = 0;
   const tbody = $('estTabelaBody');
   tbody.innerHTML = '';
 
@@ -3115,16 +3127,22 @@ function renderEstoqueRelatorio(){
     .sort((a,b) => a.nome.localeCompare(b.nome))
     .forEach(p => {
       const estoque = p.quantidade || 0;
-      const valorItem = (p.precoCusto || 0) * estoque;
-      valorTotal += valorItem;
+      const custoUnit = p.precoCusto || 0;
+      const vendaUnit = p.precoVenda || 0;
+      const custoItem = custoUnit * estoque;
+      const vendaItem = vendaUnit * estoque;
+      valorTotal += custoItem;
+      valorVendaTotal += vendaItem;
       qtdTotal += estoque;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${escapeHtml(p.nome)}</td><td class="num">${estoque}</td><td class="num">${fmtBRL(valorItem)}</td>`;
+      tr.innerHTML = `<td>${escapeHtml(p.nome)}</td><td class="num">${estoque}</td><td class="num">${fmtBRL(custoUnit)}</td><td class="num">${fmtBRL(vendaUnit)}</td><td class="num">${fmtBRL(custoItem)}</td><td class="num">${fmtBRL(vendaItem)}</td>`;
       tbody.appendChild(tr);
     });
 
   $('estValorTotal').textContent = fmtBRL(valorTotal);
   $('estQtdTotal').textContent = qtdTotal.toLocaleString('pt-BR');
+  $('estValorVendaTotal').textContent = fmtBRL(valorVendaTotal);
+  $('estLucroPotencial').textContent = fmtBRL(valorVendaTotal - valorTotal);
 }
 
 // ===== MODO NOTURNO =====
