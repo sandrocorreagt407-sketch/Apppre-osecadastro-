@@ -1117,6 +1117,20 @@
     </div>
 
     <div class="card">
+      <p class="section-label">VENDAS POR CATEGORIA</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Mesmo período selecionado acima — mostra qual tipo de produto (caneca, camisa, garrafa etc.) está vendendo mais.</p>
+      <div style="overflow-x:auto;">
+        <table class="small-table" id="relTabelaCategorias">
+          <thead><tr><th>Categoria</th><th class="num">Qtd.</th><th class="num">Vendido</th><th class="num">Lucro</th></tr></thead>
+          <tbody id="relCategoriasBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="relCategoriasEmptyState" style="display:none;">
+        Nenhuma venda registrada nesse período.
+      </div>
+    </div>
+
+    <div class="card">
       <p class="section-label">FATURAMENTO POR MÊS (últimos 6 meses)</p>
       <div class="chart-wrap" id="chartFaturamentoMensal"></div>
     </div>
@@ -2990,6 +3004,34 @@ function renderContasReceber(){
   });
 }
 
+function renderCategoriasRelatorio(vendas){
+  const tbody = $('relCategoriasBody');
+  const vazio = $('relCategoriasEmptyState');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const cadastro = getCadastro();
+  const grupos = {};
+  vendas.forEach(v => {
+    const produto = cadastro.find(p => p.id === v.produtoId);
+    const cat = (produto && produto.categoria && produto.categoria.trim()) ? produto.categoria.trim() : 'Sem categoria';
+    if (!grupos[cat]) grupos[cat] = { qtd: 0, valor: 0, lucro: 0 };
+    grupos[cat].qtd += v.quantidade || 0;
+    grupos[cat].valor += v.valorVenda || 0;
+    grupos[cat].lucro += v.lucroTotal || 0;
+  });
+
+  const categorias = Object.keys(grupos).sort((a,b) => grupos[b].valor - grupos[a].valor);
+  vazio.style.display = categorias.length === 0 ? 'block' : 'none';
+
+  categorias.forEach(cat => {
+    const g = grupos[cat];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(cat)}</td><td class="num">${g.qtd}</td><td class="num">${fmtBRL(g.valor)}</td><td class="num" style="color:${g.lucro>=0?'var(--profit)':'var(--loss)'}">${fmtBRL(g.lucro)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
 function renderRelatorios(){
   const periodo = $('relPeriodo').value;
   const vendas = vendasNoPeriodo(periodo);
@@ -3009,6 +3051,7 @@ function renderRelatorios(){
   $('relLucroTotal').textContent = fmtBRL(totalLucro);
   $('relCustoTotal').textContent = fmtBRL(totalCusto);
   $('relUnidVendidas').textContent = totalUnid.toLocaleString('pt-BR');
+  renderCategoriasRelatorio(vendas);
 
   const boxLucro = $('relBoxLucro');
   boxLucro.classList.remove('positive','negative');
