@@ -946,6 +946,16 @@
         <label for="vdValorPagoParcial">Valor pago agora (R$)</label>
         <input type="number" id="vdValorPagoParcial" step="0.01" min="0" placeholder="0,00">
       </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
+          <input type="checkbox" id="vdCobrarEntrega" style="width:18px;height:18px;flex-shrink:0;">
+          🚚 Cobrar taxa de entrega
+        </label>
+      </div>
+      <div class="field" id="campoValorEntrega" style="display:none;">
+        <label for="vdValorEntrega">Valor da taxa de entrega (R$)</label>
+        <input type="number" id="vdValorEntrega" step="0.01" min="0" placeholder="0,00">
+      </div>
     </div>
 
     <div class="card">
@@ -2645,13 +2655,17 @@ $('btnFinalizarVenda').addEventListener('click', () => {
   if (carrinhoVenda.length === 0) return;
   const data = $('vdData').value || new Date().toISOString().slice(0,10);
 
-  let qtdTotal = 0, valorTotal = 0, lucroTotal = 0;
+  let qtdTotal = 0, valorProdutos = 0, lucroTotal = 0;
   const linhasResumo = carrinhoVenda.map(item => {
     qtdTotal += item.quantidade;
-    valorTotal += item.subtotal;
+    valorProdutos += item.subtotal;
     lucroTotal += item.lucroSubtotal;
     return `• ${item.quantidade}x ${item.produtoNome} — ${fmtBRL(item.subtotal)}`;
   }).join('\n');
+
+  const cobrarEntrega = $('vdCobrarEntrega').checked;
+  const taxaEntrega = cobrarEntrega ? Math.max(0, num($('vdValorEntrega').value)) : 0;
+  const valorTotal = valorProdutos + taxaEntrega;
 
   const statusPagamento = $('vdStatusPagamento').value;
   let valorPago;
@@ -2668,7 +2682,9 @@ $('btnFinalizarVenda').addEventListener('click', () => {
   const confirmMsg = `Confirma finalizar esta venda?\n\n${linhasResumo}\n\n`
     + `Itens diferentes: ${carrinhoVenda.length}\n`
     + `Quantidade total: ${qtdTotal} un.\n`
-    + `Valor total: ${fmtBRL(valorTotal)}\n`
+    + `Valor dos produtos: ${fmtBRL(valorProdutos)}\n`
+    + (taxaEntrega > 0 ? `Taxa de entrega: ${fmtBRL(taxaEntrega)}\n` : '')
+    + `Total a cobrar: ${fmtBRL(valorTotal)}\n`
     + `Pagamento: ${labelPagamento}\n\n`
     + `Isso vai dar baixa no estoque de cada produto no Cadastro.`;
   if (!confirm(confirmMsg)) return;
@@ -2702,6 +2718,7 @@ $('btnFinalizarVenda').addEventListener('click', () => {
       valorVenda: item.subtotal,
       custoVenda: item.custoUnit * item.quantidade,
       statusPagamento: statusFinal,
+      taxaEntrega,
       valorTotalPedido: valorTotal,
       valorPagoPedido: valorPago,
       valorPendentePedido: valorPendente,
@@ -2727,6 +2744,9 @@ $('btnFinalizarVenda').addEventListener('click', () => {
   $('vdStatusPagamento').value = 'pago';
   $('vdValorPagoParcial').value = '';
   $('campoValorPagoParcial').style.display = 'none';
+  $('vdCobrarEntrega').checked = false;
+  $('vdValorEntrega').value = '';
+  $('campoValorEntrega').style.display = 'none';
   renderCarrinho();
   popularSelectProdutos();
   renderVendas();
@@ -2734,6 +2754,11 @@ $('btnFinalizarVenda').addEventListener('click', () => {
   renderClientes();
   registrarLog('Venda finalizada', `${totalItensPedido} item(ns), ${qtdTotal} un. — ${fmtBRL(totalFinal)}${clienteNome ? ' — cliente: ' + clienteNome : ''} — ${labelPagamento}`);
   toast(`✅ Venda finalizada — ${qtdTotal} un. em ${fmtBRL(totalFinal)}. ${labelPagamento}`, 'success');
+});
+
+$('vdCobrarEntrega').addEventListener('change', () => {
+  $('campoValorEntrega').style.display = $('vdCobrarEntrega').checked ? 'block' : 'none';
+  if ($('vdCobrarEntrega').checked) $('vdValorEntrega').focus();
 });
 
 $('vdStatusPagamento').addEventListener('change', () => {
@@ -2818,7 +2843,12 @@ function gerarComprovanteVenda(vendaId){
     linhas.push(`   ${fmtBRL(it.precoUsado)} un.${it.descontoAplicado ? ' (desconto ' + fmtPct(it.descontoAplicado) + ')' : ''} = ${fmtBRL(it.valorVenda)}`);
   });
   linhas.push('-'.repeat(32));
-  linhas.push(`TOTAL: ${fmtBRL(totalGeral)}`);
+  const taxaEntregaComprovante = venda.taxaEntrega || 0;
+  if (taxaEntregaComprovante > 0){
+    linhas.push(`Subtotal produtos: ${fmtBRL(totalGeral)}`);
+    linhas.push(`Taxa de entrega: ${fmtBRL(taxaEntregaComprovante)}`);
+  }
+  linhas.push(`TOTAL: ${fmtBRL(totalGeral + taxaEntregaComprovante)}`);
   const status = venda.statusPagamento || 'pago';
   if (status === 'pago'){
     linhas.push('PAGAMENTO: Pago integralmente');
@@ -2862,6 +2892,7 @@ function construirCardVenda(v){
       <div>
         <div class="product-name">${escapeHtml(v.produtoNome)} <span style="font-size:11px;font-weight:700;color:${badge.cor};border:1px solid ${badge.cor};border-radius:999px;padding:1px 8px;">${badge.texto}</span></div>
         <div class="product-meta">${dataFmt} · ${v.quantidade} un. × ${fmtBRL(v.precoUsado)}${v.descontoAplicado ? ' · desconto ' + fmtPct(v.descontoAplicado) : ''}${tagPedido}${tagCliente}</div>
+        ${(v.taxaEntrega || 0) > 0 ? `<div class="product-meta">🚚 Taxa de entrega: ${fmtBRL(v.taxaEntrega)} (inclusa no total da venda)</div>` : ''}
         ${status !== 'pago' && pendente > 0 ? `<div class="product-meta" style="color:${badge.cor};font-weight:600;">Pendente: ${fmtBRL(pendente)}</div>` : ''}
       </div>
     </div>
