@@ -1165,6 +1165,23 @@
     </div>
 
     <div class="card">
+      <p class="section-label">HISTÓRICO DE METAS</p>
+      <div class="results" style="margin-bottom:10px;">
+        <div class="result-row"><span>Metas batidas</span><span class="val num" id="histMetasBatidas">0</span></div>
+        <div class="result-row"><span>Meses acompanhados</span><span class="val num" id="histMetasTotal">0</span></div>
+        <div class="result-row"><span>Sequência atual 🔥</span><span class="val num" id="histMetasSequencia">0 mês(es)</span></div>
+        <div class="result-row"><span>Melhor mês</span><span class="val num" id="histMetasMelhor">—</span></div>
+      </div>
+      <button class="btn-secondary" id="btnToggleHistMetas" style="margin-top:0;">Mostrar meses</button>
+      <div id="blocoHistMetas" style="display:none;margin-top:10px;">
+        <div id="listaHistMetas"></div>
+        <div class="empty-state" id="histMetasEmptyState" style="display:none;">
+          Ainda não há meses com meta definida. Defina uma meta acima e ela passa a ser acompanhada aqui.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
       <p class="section-label">ESTOQUE TOTAL</p>
       <div class="hero-results">
         <div class="hero-box positive">
@@ -3083,6 +3100,7 @@ function renderRelatorios(){
   $('relCustoTotal').textContent = fmtBRL(totalCusto);
   $('relUnidVendidas').textContent = totalUnid.toLocaleString('pt-BR');
   renderCategoriasRelatorio(vendas);
+  renderHistoricoMetas();
 
   const boxLucro = $('relBoxLucro');
   boxLucro.classList.remove('positive','negative');
@@ -3183,11 +3201,129 @@ function renderMeta(){
   $('metaProgressFill').classList.toggle('over', vendidoMes >= alvo);
   $('metaProgressLabel').textContent = (vendidoMes >= alvo ? 'Meta atingida — ' : '') + Math.round((vendidoMes/alvo)*100) + '% da meta';
 }
+// ===== HISTÓRICO DE METAS =====
+// A meta de cada mês é guardada na hora em que é salva — assim, se você mudar a meta
+// depois, os meses antigos continuam sendo avaliados pela meta que valia naquela época.
+const METAS_MES_KEY = 'metasPorMes';
+const NOMES_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function getMetasPorMes(){
+  try{ return JSON.parse(localStorage.getItem(METAS_MES_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function chaveMes(d){
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function metaVigenteNoMes(ym, metasPorMes){
+  if (metasPorMes[ym] !== undefined) return metasPorMes[ym];
+  // pega a última meta registrada até aquele mês
+  const anteriores = Object.keys(metasPorMes).filter(k => k <= ym).sort();
+  if (anteriores.length) return metasPorMes[anteriores[anteriores.length - 1]];
+  // meses anteriores ao início do registro usam a meta atual (única informação disponível)
+  const atual = num(localStorage.getItem(META_KEY));
+  return atual > 0 ? atual : 0;
+}
+
+function renderHistoricoMetas(){
+  if (!$('listaHistMetas')) return;
+  const vendas = getVendas();
+  const metasPorMes = getMetasPorMes();
+  const hoje = new Date();
+  const ymAtual = chaveMes(hoje);
+
+  // soma unidades vendidas por mês
+  const vendidoPorMes = {};
+  vendas.forEach(v => {
+    const ym = (v.data || '').slice(0, 7);
+    if (ym) vendidoPorMes[ym] = (vendidoPorMes[ym] || 0) + (v.quantidade || 0);
+  });
+
+  // intervalo: do primeiro mês com venda/meta até o mês atual
+  const todos = [...Object.keys(vendidoPorMes), ...Object.keys(metasPorMes), ymAtual].sort();
+  const [anoIni, mesIni] = todos[0].split('-').map(Number);
+  const meses = [];
+  let a = anoIni, m = mesIni;
+  while (a * 100 + m <= hoje.getFullYear() * 100 + (hoje.getMonth() + 1)){
+    meses.push(a + '-' + String(m).padStart(2, '0'));
+    m++; if (m > 12){ m = 1; a++; }
+  }
+
+  const linhas = meses.map(ym => {
+    const meta = metaVigenteNoMes(ym, metasPorMes);
+    const vendido = vendidoPorMes[ym] || 0;
+    const [ano, mes] = ym.split('-').map(Number);
+    let status;
+    if (!(meta > 0)) status = 'sem_meta';
+    else if (vendido >= meta) status = 'batida';
+    else if (ym === ymAtual) status = 'andamento';
+    else status = 'nao_batida';
+    return { ym, ano, mes, meta, vendido, status, pct: meta > 0 ? Math.round((vendido / meta) * 100) : 0 };
+  });
+
+  const comMeta = linhas.filter(l => l.status !== 'sem_meta');
+  const batidas = linhas.filter(l => l.status === 'batida');
+
+  // sequência atual: meses consecutivos batidos, contando do mais recente para trás
+  // (o mês atual ainda em andamento não quebra a sequência)
+  let sequencia = 0;
+  for (let i = linhas.length - 1; i >= 0; i--){
+    const l = linhas[i];
+    if (l.status === 'batida') sequencia++;
+    else if (l.status === 'andamento') continue;
+    else break;
+  }
+
+  const melhor = batidas.length ? batidas.reduce((x, y) => (y.pct > x.pct ? y : x)) : null;
+
+  $('histMetasBatidas').textContent = batidas.length;
+  $('histMetasTotal').textContent = comMeta.length;
+  $('histMetasSequencia').textContent = sequencia + ' mês(es)';
+  $('histMetasMelhor').textContent = melhor ? `${NOMES_MESES[melhor.mes - 1]}/${melhor.ano} (${melhor.pct}%)` : '—';
+
+  const container = $('listaHistMetas');
+  container.innerHTML = '';
+  $('histMetasEmptyState').style.display = comMeta.length === 0 ? 'block' : 'none';
+
+  const estilos = {
+    batida: { txt: '✅ Meta batida', cor: 'var(--profit)' },
+    nao_batida: { txt: '❌ Não batida', cor: 'var(--loss)' },
+    andamento: { txt: '⏳ Em andamento', cor: '#b98900' },
+    sem_meta: { txt: '— Sem meta', cor: 'var(--muted)' },
+  };
+  linhas.slice().reverse().filter(l => l.status !== 'sem_meta').forEach(l => {
+    const e = estilos[l.status];
+    const el = document.createElement('div');
+    el.style.cssText = 'padding:9px 0;border-bottom:1px solid var(--line);';
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">
+        <strong style="font-size:14px;">${NOMES_MESES[l.mes - 1]}/${l.ano}</strong>
+        <span style="font-size:12.5px;font-weight:700;color:${e.cor};">${e.txt}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);">${l.vendido} de ${l.meta} un. (${l.pct}%)</div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+$('btnToggleHistMetas').addEventListener('click', () => {
+  const bloco = $('blocoHistMetas');
+  const visivel = bloco.style.display !== 'none';
+  bloco.style.display = visivel ? 'none' : 'block';
+  $('btnToggleHistMetas').textContent = visivel ? 'Mostrar meses' : 'Ocultar meses';
+});
+
 $('btnSalvarMeta').addEventListener('click', () => {
   const v = num($('metaQtd').value);
   if (v > 0) localStorage.setItem(META_KEY, v);
   else localStorage.removeItem(META_KEY);
+  const metasPorMes = getMetasPorMes();
+  const ymAgora = chaveMes(new Date());
+  if (v > 0) metasPorMes[ymAgora] = v;
+  else delete metasPorMes[ymAgora];
+  localStorage.setItem(METAS_MES_KEY, JSON.stringify(metasPorMes));
+  registrarLog(v > 0 ? 'Meta definida' : 'Meta removida', v > 0 ? `${v} un. para ${NOMES_MESES[new Date().getMonth()]}` : 'Meta do mês removida');
   renderMeta();
+  renderHistoricoMetas();
 });
 
 function renderEstoqueRelatorio(){
@@ -3583,6 +3719,7 @@ function exportarBackup(){
     vendas: JSON.parse(localStorage.getItem(VENDAS_KEY) || '[]'),
     uso: JSON.parse(localStorage.getItem(EQUIP_KEY) || '[]'),
     metaQuantidadeVendida: localStorage.getItem(META_KEY) || null,
+    metasPorMes: getMetasPorMes(),
     usuarios: getUsuarios(),
     log: getLog()
   };
@@ -3621,6 +3758,9 @@ function importarBackup(file){
     if (Array.isArray(dados.uso)) localStorage.setItem(EQUIP_KEY, JSON.stringify(dados.uso));
     if (Array.isArray(dados.usuarios)) localStorage.setItem(USERS_KEY, JSON.stringify(dados.usuarios));
     if (Array.isArray(dados.log)) localStorage.setItem(LOG_KEY, JSON.stringify(dados.log));
+    if (dados.metasPorMes && typeof dados.metasPorMes === 'object'){
+      localStorage.setItem(METAS_MES_KEY, JSON.stringify(dados.metasPorMes));
+    }
     if (dados.metaQuantidadeVendida !== undefined && dados.metaQuantidadeVendida !== null){
       localStorage.setItem(META_KEY, dados.metaQuantidadeVendida);
     }
